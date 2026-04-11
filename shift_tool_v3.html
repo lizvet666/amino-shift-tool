@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シフト自動作成ツール v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface2: #f8f9fc;
+  --border: #e2e6f0;
+  --accent: #e8520a;
+  --accent-mid: #c94408;
+  --accent2: #e8520a;
+  --accent3: #2563eb;
+  --text: #1a1f36;
+  --text-muted: #64748b;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+.container { max-width: 100%; padding: 16px 20px; position: relative; }
+header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid var(--border); }
+.logo { font-family: 'Space Mono',monospace; font-size: 10px; color: var(--accent); letter-spacing: 0.2em; background: rgba(232,82,10,0.08); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(232,82,10,0.25); font-weight: 700; }
+h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+h1 span { color: var(--accent); }
+.badge { font-size: 10px; padding: 2px 9px; border-radius: 20px; background: rgba(232,82,10,0.10); border: 1px solid rgba(232,82,10,0.3); color: var(--accent); margin-left: 4px; font-weight: 700; }
+.main-layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; align-items: start; }
+.section-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border); font-size:12px; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); }
+.section-bar .section-title { color:var(--text); font-size:13px; }
+.right-col { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.panel-header { padding: 11px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: var(--surface2); }
+.panel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.dot.o { background: var(--warning); }
+.dot.g { background: var(--success); }
+.panel-body { padding: 14px; }
+.form-group { margin-bottom: 12px; }
+label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+input[type="number"], input[type="text"], textarea, select {
+  width: 100%; background: #fff; border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,82,10,0.12); }
+textarea { resize: vertical; min-height: 54px; }
+.date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.staff-block { margin-bottom: 10px; }
+.staff-block-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; padding: 6px 0; cursor: pointer; }
+.staff-block-header .chevron { margin-left: auto; font-size: 10px; color: var(--text-muted); transition: transform 0.2s; }
+.staff-block-header.open .chevron { transform: rotate(180deg); }
+.holiday-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; padding-top: 6px; }
+.cal-hdr { font-size: 10px; font-weight: 700; text-align: center; padding: 2px 0; color: var(--text-muted); }
+.cal-hdr.sat { color: var(--accent3); }
+.cal-hdr.sun { color: var(--danger); }
+.day-cell { aspect-ratio: 1; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.12s; user-select: none; flex-direction: column; gap: 0; }
+.day-cell:hover { border-color: var(--accent); background: rgba(232,82,10,0.05); }
+.day-cell.holiday { background: rgba(232,82,10,0.12); border-color: var(--accent); color: var(--accent); }
+.day-cell.sun { color: var(--danger); }
+.day-cell.sat { color: var(--accent3); }
+.day-cell .dn { font-size: 11px; font-weight: 700; line-height: 1; }
+.day-cell .dw { font-size: 8px; opacity: 0.65; }
+.btn-gen { width: 100%; padding: 12px; background: linear-gradient(135deg,var(--accent-mid),var(--accent)); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s; letter-spacing: 0.04em; margin-top: 14px; box-shadow: 0 2px 8px rgba(232,82,10,0.3); }
+.btn-gen:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(232,82,10,0.45); }
+.btn-gen:active { transform: none; }
+.btn-gen:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-sm { padding: 6px 12px; border-radius: 5px; font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); transition: all 0.14s; }
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm.pri { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-sm.pri:hover { background: var(--accent-mid); }
+.btn-sm.danger { background: rgba(220,38,38,0.06); border-color: var(--danger); color: var(--danger); }
+.btn-sm.success { background: rgba(22,163,74,0.08); border-color: var(--success); color: var(--success); }
+.tab .badge-count { display: inline-block; margin-left: 4px; min-width: 16px; background: var(--danger); color: white; border-radius: 8px; font-size: 9px; padding: 0 4px; text-align: center; }
+.tab .badge-count.ok { background: var(--success); color: #fff; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.shift-outer { overflow-x: auto; }
+.shift-table { border-collapse: collapse; font-size: 11px; width: 100%; }
+.shift-table th { background: var(--surface2); padding: 7px 3px; text-align: center; font-weight: 700; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 10; color: var(--text); }
+.shift-table th.staff-col { position: sticky; top: 0; left: 0; z-index: 20; background: var(--surface2); text-align: left; padding-left: 10px; border-right: 2px solid var(--border); box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
+.shift-table th.work-col  { position: sticky; top: 0; left: 60px; z-index: 20; background: var(--surface2); border-right: 2px solid var(--border); }
+.shift-table th.sun-h { color: var(--danger); }
+.shift-table th.sat-h { color: var(--accent3); }
+.shift-table td { padding: 4px 3px; text-align: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); min-width: 64px; height: 34px; vertical-align: middle; }
+.shift-table td.sun-col { background: rgba(220,38,38,0.03); }
+.shift-table td.sat-col { background: rgba(37,99,235,0.03); }
+.shift-table td.staff-col { background: var(--surface2) !important; font-weight: 700; font-size: 12px; text-align: left; padding-left: 10px; position: sticky; left: 0; z-index: 5; border-right: 2px solid var(--border); min-width: 60px; box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
+.shift-table td.work-col { background: var(--surface2) !important; font-family: 'Space Mono',monospace; font-weight: 700; font-size: 12px; color: var(--accent); position: sticky; left: 60px; z-index: 5; border-right: 2px solid var(--border); min-width: 36px; }
+.shift-cell { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 26px; border-radius: 4px; font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.12s; white-space: nowrap; padding: 0 4px; position: relative; }
+.shift-cell:hover { transform: scale(1.08); z-index: 20; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.shift-cell.rest { color: #c0c8d8; background: transparent; }
+.shift-cell.rest:hover { background: rgba(0,0,0,0.04); }
+.shift-cell.modified { }
+#storePopup { position: fixed; z-index: 1000; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display: none; min-width: 130px; animation: popIn 0.1s ease; }
+@keyframes popIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+#storePopup .popup-title { font-size: 10px; color: var(--text-muted); padding: 2px 6px 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; letter-spacing: 0.06em; }
+#storePopup .popup-item { padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; transition: all 0.1s; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; color: var(--text); }
+#storePopup .popup-item:hover { background: rgba(232,82,10,0.08); color: var(--accent); }
+#storePopup .popup-item .dot-s { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+#storePopup .popup-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.store-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; padding: 14px; }
+.store-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; transition: all 0.18s; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.store-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.store-card.ok { border-color: rgba(22,163,74,0.4); background: rgba(22,163,74,0.04); opacity: 0.55; }
+.store-card.over { border-color: rgba(220,38,38,0.4); background: rgba(220,38,38,0.04); }
+.store-card.under { border-color: rgba(217,119,6,0.4); background: rgba(217,119,6,0.04); }
+.store-card.store-active { box-shadow: 0 0 0 2px var(--accent), 0 4px 16px rgba(232,82,10,0.2); transform: translateY(-2px); }
+.shift-cell.hl-match { outline: 2px solid var(--accent) !important; outline-offset: 2px; box-shadow: 0 0 8px rgba(232,82,10,0.5); transform: scale(1.12); z-index: 30; }
+.shift-cell.hl-dim { opacity: 0.15; }
+.sc-name { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+.sc-num { font-size: 22px; font-weight: 700; font-family: 'Space Mono',monospace; line-height: 1; }
+.ok .sc-num { color: var(--success); }
+.over .sc-num { color: var(--danger); }
+.under .sc-num { color: var(--warning); }
+.viol-list { display: flex; flex-direction: column; gap: 5px; padding: 12px; }
+.viol-item { background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2); border-radius: 5px; padding: 7px 10px; font-size: 12px; color: #b91c1c; display: flex; align-items: flex-start; gap: 6px; }
+.viol-item.warn { background: rgba(217,119,6,0.06); border-color: rgba(217,119,6,0.25); color: #92400e; }
+.viol-item.info { background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.2); color: #1e40af; }
+.export-row { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface2); align-items: center; }
+.change-count { font-size: 11px; color: var(--accent); margin-left: auto; font-weight: 700; }
+.loading-overlay { display: none; position: fixed; inset: 0; background: rgba(26,31,54,0.7); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 14px; backdrop-filter: blur(6px); }
+.loading-overlay.show { display: flex; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: #fff; font-family: 'Space Mono',monospace; }
+.empty-state { padding: 50px 20px; text-align: center; color: var(--text-muted); }
+.empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.25; }
+.empty-text { font-size: 12px; line-height: 1.7; }
+.info-note { background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #1d4ed8; margin: 10px 12px 0; line-height: 1.6; }
+.edit-hint { font-size: 11px; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border); background: rgba(232,82,10,0.04); display: flex; align-items: center; gap: 6px; }
+.btn-admin { padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); transition: all 0.14s; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.btn-admin:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,82,10,0.06); }
+
+/* ===== ADMIN MODAL ===== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,31,54,0.6); z-index: 500; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; backdrop-filter: blur(6px); }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 860px; animation: popIn 0.15s ease; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.modal-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); border-radius: 14px 14px 0 0; }
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.modal-close { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; transition: color 0.1s; }
+.modal-close:hover { color: var(--accent); }
+.modal-tabs { display: flex; gap: 3px; padding: 10px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.modal-tab { padding: 7px 16px; border-radius: 5px 5px 0 0; font-size: 11px; font-weight: 700; cursor: pointer; color: var(--text-muted); transition: all 0.12s; border: 1px solid transparent; border-bottom: none; margin-bottom: -1px; }
+.modal-tab.active { color: var(--accent); background: var(--surface); border-color: var(--border); border-bottom-color: var(--surface); }
+.modal-body { padding: 20px; }
+.modal-tab-content { display: none; }
+.modal-tab-content.active { display: block; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.admin-table th { background: var(--surface2); padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.admin-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table input[type="text"], .admin-table input[type="number"], .admin-table select {
+  padding: 4px 8px; font-size: 12px; border-radius: 4px;
+}
+.admin-table input[type="text"] { width: 100%; }
+.admin-add-row { display: flex; gap: 8px; margin-top: 12px; align-items: flex-end; flex-wrap: wrap; }
+.admin-add-row .form-group { margin-bottom: 0; }
+.admin-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; margin-top: 20px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+.admin-section-title:first-child { margin-top: 0; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface2); border-radius: 0 0 14px 14px; }
+.col-narrow { width: 80px; }
+.col-mid { width: 120px; }
+.dow-checks { display: flex; gap: 4px; flex-wrap: wrap; }
+.dow-check { display: flex; align-items: center; gap: 3px; font-size: 11px; cursor: pointer; }
+.dow-check input { width: auto; }
+.rules-textarea { width: 100%; min-height: 200px; font-size: 12px; line-height: 1.7; }
+.preview-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 11px; line-height: 1.8; color: var(--text-muted); white-space: pre-wrap; max-height: 240px; overflow-y: auto; margin-bottom: 12px; }
+
+/* ===== ADMIN MODE ===== */
+body:not(.admin-mode) .admin-only { display: none !important; }
+body:not(.admin-mode) .main-layout { grid-template-columns: 1fr; }
+body:not(.admin-mode) .shift-cell { cursor: default; }
+body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
+
+.btn-lock { padding:7px 14px; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); transition:all 0.14s; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.btn-lock:hover { border-color:var(--accent); color:var(--accent); background:rgba(232,82,10,0.06); }
+.btn-lock.unlocked { border-color:var(--success); color:var(--success); background:rgba(22,163,74,0.06); }
+.btn-lock.unlocked:hover { border-color:var(--danger); color:var(--danger); background:rgba(220,38,38,0.06); }
+
+.pw-modal-overlay { display:none; position:fixed; inset:0; background:rgba(26,31,54,0.7); z-index:600; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+.pw-modal-overlay.show { display:flex; }
+.pw-modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:100%; max-width:360px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,0.2); animation:popIn 0.15s ease; }
+.pw-modal-title { font-size:16px; font-weight:700; margin-bottom:6px; color:var(--text); }
+.pw-modal-sub { font-size:12px; color:var(--text-muted); margin-bottom:20px; line-height:1.6; }
+.pw-error { font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <span class="logo">SHIFT GEN</span>
+    <h1>シフト<span>自動作成</span>ツール <span class="badge">v3 Gemini対応</span></h1>
+    <button class="btn-admin admin-only" onclick="openAdmin()">⚙ 管理者設定</button>
+    <button class="btn-lock" id="btnLock" onclick="handleLockBtn()">🔒 管理者ログイン</button>
+  </header>
+
+  <div class="main-layout">
+    <!-- Left panel (admin only) -->
+    <div class="admin-only" style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="panel">
+        <div class="panel-header"><div class="dot"></div><span class="panel-title">対象月</span></div>
+        <div class="panel-body">
+          <div class="date-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label>年</label>
+              <input type="number" id="year" value="2026" min="2024" max="2030">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>月</label>
+              <input type="number" id="month" value="4" min="1" max="12">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="dot o"></div><span class="panel-title">休日希望</span></div>
+        <div class="panel-body" style="padding:10px">
+          <div id="staffList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="dot" style="background:#f76a6a;box-shadow:0 0 6px #f76a6a"></div><span class="panel-title">前月末の連勤数</span></div>
+        <div class="panel-body" style="padding:10px 14px">
+          <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">月末に連続で出勤していた日数を入力してください（0=休みで終わった）</p>
+          <div id="prevConsecList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="dot g"></div><span class="panel-title">追加指示（任意）</span></div>
+        <div class="panel-body">
+          <textarea id="extraNote" placeholder="今月の特記事項（例：高坂を21〜23日連休にしたい）" rows="3"></textarea>
+        </div>
+      </div>
+
+      <button class="btn-gen" id="btnGen" onclick="generateShift()">✦ AIでシフトを自動生成</button>
+    </div>
+
+    <!-- Right col -->
+    <div class="right-col">
+
+      <!-- シフト表 -->
+      <div class="panel">
+        <div class="section-bar">
+          <div class="dot"></div>
+          <span class="section-title">📋 シフト表</span>
+          <div id="exportRow" class="admin-only" style="display:none;margin-left:auto;align-items:center;gap:6px">
+            <button class="btn-sm pri" onclick="exportCSV()">📥 CSV</button>
+            <button class="btn-sm" onclick="generateShift()">🔄 再生成</button>
+            <button class="btn-sm" onclick="undoLastChange()" id="btnUndo" style="display:none">↩ 元に戻す</button>
+            <span class="change-count" id="changeCount"></span>
+          </div>
+        </div>
+        <div id="shiftArea">
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div class="empty-text">「AIでシフトを自動生成」を押すと<br>シフト表が表示されます<br><br>
+            <span style="color:#F68048">生成後は各セルをクリックして店舗を変更できます</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 店舗進捗 -->
+      <div class="panel admin-only" id="storePanel" style="display:none">
+        <div class="section-bar">
+          <div class="dot o"></div>
+          <span class="section-title">🏪 店舗進捗</span>
+        </div>
+        <div id="storeArea"></div>
+      </div>
+
+      <!-- ルールチェック -->
+      <div class="panel admin-only" id="violPanel" style="display:none">
+        <div class="section-bar">
+          <div class="dot g"></div>
+          <span class="section-title">✅ ルールチェック</span>
+          <span class="badge-count ok" id="violBadge" style="margin-left:8px">0</span>
+        </div>
+        <div id="violationArea"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="pw-modal-overlay" id="pwModal">
+  <div class="pw-modal">
+    <div class="pw-modal-title">🔒 管理者ログイン</div>
+    <div class="pw-modal-sub">管理者機能（シフト生成・編集・設定）を使用するにはパスワードを入力してください。</div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>パスワード</label>
+      <input type="password" id="pwInput" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doUnlockAdmin()">
+    </div>
+    <div class="pw-error" id="pwError"></div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closePwModal()">キャンセル</button>
+      <button class="btn-sm pri" onclick="doUnlockAdmin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup -->
+<div id="storePopup"></div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">AIがシフトを考えています...</div>
+</div>
+
+<!-- ===== ADMIN MODAL ===== -->
+<div class="modal-overlay" id="adminModal" onclick="handleModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span style="font-size:18px">⚙</span>
+      <span class="modal-title">管理者設定</span>
+      <button class="modal-close" onclick="closeAdmin()">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchAdminTab('staff')">👤 スタッフ管理</div>
+      <div class="modal-tab" onclick="switchAdminTab('stores')">🏪 店舗管理</div>
+      <div class="modal-tab" onclick="switchAdminTab('rules')">📋 ルール・制約</div>
+      <div class="modal-tab" onclick="switchAdminTab('api')">🔑 API設定</div>
+    </div>
+
+    <!-- STAFF TAB -->
+    <div class="modal-body modal-tab-content active" id="adminTab-staff">
+      <div class="admin-section-title">スタッフ一覧</div>
+      <table class="admin-table" id="staffAdminTable">
+        <thead>
+          <tr>
+            <th>名前</th>
+            <th class="col-mid">固定休み曜日</th>
+            <th class="col-narrow">最大連勤</th>
+            <th style="width:40px">削除</th>
+          </tr>
+        </thead>
+        <tbody id="staffAdminBody"></tbody>
+      </table>
+      <div class="admin-add-row" style="margin-top:14px">
+        <div class="form-group" style="flex:1;min-width:120px">
+          <label>名前</label>
+          <input type="text" id="newStaffName" placeholder="例：田中">
+        </div>
+        <button class="btn-sm success" onclick="addStaff()">＋ 追加</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">
+        ※ 固定休み曜日：毎週必ず休む曜日（例：木曜）。チェックした曜日以外が出勤可能日になります。
+      </div>
+    </div>
+
+    <!-- STORES TAB -->
+    <div class="modal-body modal-tab-content" id="adminTab-stores">
+      <div class="admin-section-title">店舗一覧</div>
+      <table class="admin-table" id="storeAdminTable">
+        <thead>
+          <tr>
+            <th>店舗名</th>
+            <th class="col-narrow">必要日数</th>
+            <th class="col-narrow">1日最大</th>
+            <th class="col-mid">配置可スタッフ</th>
+            <th class="col-narrow">稼働期間</th>
+            <th class="col-mid">禁止曜日</th>
+            <th style="width:40px">削除</th>
+          </tr>
+        </thead>
+        <tbody id="storeAdminBody"></tbody>
+      </table>
+      <div class="admin-add-row" style="margin-top:14px">
+        <div class="form-group" style="flex:2;min-width:120px">
+          <label>店舗名</label>
+          <input type="text" id="newStoreName" placeholder="例：新宿">
+        </div>
+        <div class="form-group" style="flex:1;min-width:80px">
+          <label>必要日数</label>
+          <input type="number" id="newStoreReq" value="10" min="1" max="31">
+        </div>
+        <button class="btn-sm success" onclick="addStore()">＋ 追加</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">
+        ※ 配置可スタッフ：空欄=全員可、名前をカンマ区切りで（例：黒田,用品）<br>
+        ※ 禁止曜日：その曜日に配置不可（複数選択可）<br>
+        ※ 稼働期間：全日 / 1〜10日のみ / 11日以降のみ
+      </div>
+    </div>
+
+    <!-- RULES TAB -->
+    <div class="modal-body modal-tab-content" id="adminTab-rules">
+      <div class="admin-section-title">店舗ルール（AIプロンプト用）</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">店舗ごとの詳細ルールを記述します。設定した構造化制約は自動で追記されます。</p>
+      <textarea class="rules-textarea" id="adminStoreRules"></textarea>
+
+      <div class="admin-section-title">スタッフルール（AIプロンプト用）</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">スタッフごとの優先配置・希望などを記述します。</p>
+      <textarea class="rules-textarea" id="adminStaffRules"></textarea>
+    </div>
+
+    <!-- API TAB -->
+    <div class="modal-body modal-tab-content" id="adminTab-api">
+      <div class="admin-section-title">Gemini API キー</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">
+        Google AI Studio（<span style="color:var(--accent3)">aistudio.google.com/apikey</span>）で取得したAPIキーを入力してください。<br>
+        キーはこのブラウザのlocalStorageに保存され、外部に送信されることはありません。
+      </p>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0">
+          <label>APIキー</label>
+          <input type="password" id="geminiApiKey" placeholder="AIzaSy..." autocomplete="off" style="font-family:'Space Mono',monospace;letter-spacing:0.04em">
+        </div>
+        <button class="btn-sm success" onclick="saveApiKey()" style="padding:8px 16px;font-size:12px">💾 保存</button>
+      </div>
+      <div id="apiKeyStatus" style="font-size:12px;color:var(--text-muted);margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)"></div>
+
+      <div class="admin-section-title" style="margin-top:28px">管理者パスワード変更</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.7">社員に共有するURLへのアクセスは自由ですが、管理者機能はこのパスワードで保護されます。初期値は <code style="font-family:'Space Mono',monospace;background:var(--surface2);padding:1px 6px;border-radius:3px;border:1px solid var(--border)">admin</code> です。</p>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:360px">
+        <div class="form-group" style="margin-bottom:0">
+          <label>新しいパスワード</label>
+          <input type="password" id="newAdminPw" placeholder="新しいパスワードを入力">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>確認（再入力）</label>
+          <input type="password" id="newAdminPwConfirm" placeholder="もう一度入力">
+        </div>
+        <button class="btn-sm pri" onclick="changeAdminPassword()" style="align-self:flex-start">🔑 パスワードを変更</button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeAdmin()">キャンセル</button>
+      <button class="btn-sm pri" onclick="saveAdmin()">💾 保存して適用</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== COLOR PALETTE ====================
+const STORE_COLORS = [
+  { bg:'rgba(232,82,10,0.12)',   text:'#c94408' },
+  { bg:'rgba(37,99,235,0.10)',   text:'#1d4ed8' },
+  { bg:'rgba(22,163,74,0.10)',   text:'#15803d' },
+  { bg:'rgba(124,58,237,0.10)',  text:'#6d28d9' },
+  { bg:'rgba(217,119,6,0.12)',   text:'#b45309' },
+  { bg:'rgba(6,182,212,0.10)',   text:'#0e7490' },
+  { bg:'rgba(219,39,119,0.10)',  text:'#be185d' },
+  { bg:'rgba(15,118,110,0.10)',  text:'#0f766e' },
+  { bg:'rgba(79,70,229,0.10)',   text:'#4338ca' },
+  { bg:'rgba(185,28,28,0.10)',   text:'#991b1b' },
+  { bg:'rgba(5,150,105,0.10)',   text:'#047857' },
+  { bg:'rgba(202,138,4,0.10)',   text:'#854d0e' },
+  { bg:'rgba(2,132,199,0.10)',   text:'#0369a1' },
+  { bg:'rgba(147,51,234,0.10)',  text:'#7e22ce' },
+  { bg:'rgba(225,29,72,0.10)',   text:'#be123c' },
+];
+
+const DOW = ['日','月','火','水','木','金','土'];
+
+// ==================== DEFAULT DATA ====================
+const DEFAULT_STAFF = [
+  { id:'amino',    name:'網野',   fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
+  { id:'minamoto', name:'源',     fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
+  { id:'ogitani',  name:'荻谷',   fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
+  { id:'kuroda',   name:'黒田',   fixedRestDow:[4], onlyDow:-1, maxConsecutive:6 },
+  { id:'takasaka', name:'高坂',   fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
+  { id:'youhin',   name:'用品',   fixedRestDow:[1,2,3,4,5,6], onlyDow:-1, maxConsecutive:5 }, // 日曜のみ出勤
+];
+
+const DEFAULT_STORES = [
+  { id:'rara_yoko',     name:'らら横', required:20, maxPerDay:1, allowedStaff:['網野','源','荻谷','黒田'],  maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[4,6] }, // ①③ 高坂・用品除外
+  { id:'futakogawa',    name:'二俣川', required:13, maxPerDay:1, allowedStaff:[],                          maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },
+  { id:'rara_taira',    name:'らら平', required:30, maxPerDay:2, allowedStaff:[],                          maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[3,4] },  // 水=3・木=4 は月を通じて禁止
+  { id:'tsurugamine',   name:'鶴ヶ峰', required:12, maxPerDay:1, allowedStaff:[],                          maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },
+  { id:'opa',           name:'OPA',   required:12, maxPerDay:1, allowedStaff:[],                          maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },
+  { id:'kamata',        name:'蒲田',  required:4,  maxPerDay:1, allowedStaff:[],                          maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },
+  { id:'sobudai',       name:'相武台', required:15, maxPerDay:1, allowedStaff:['黒田'],                   maxDay:0,  minDay:0,  weekdayOnly:true,  noWeekdays:[4] },    // ⑥ weekdayOnly:true に変更
+  { id:'sotokanematsu', name:'外兼松', required:4,  maxPerDay:1, allowedStaff:['高坂'],                   maxDay:10, minDay:0,  weekdayOnly:true,  noWeekdays:[] },    // ④ 高坂専用に変更
+  { id:'omiya',         name:'大宮',  required:7,  maxPerDay:2, allowedStaff:['用品','高坂','荻谷'],      maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },    // ② maxPerDay:2 に変更
+  { id:'zushi',         name:'逗子',  required:4,  maxPerDay:1, allowedStaff:['網野','高坂','荻谷'],      maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },    // ⑤ 3名限定
+  { id:'jimu',          name:'事務',  required:5,  maxPerDay:9, allowedStaff:['網野'],                   maxDay:0,  minDay:0,  weekdayOnly:false, noWeekdays:[] },    // 固定5日：1日・7・8・9・最終日
+];
+
+const DEFAULT_STORE_RULES = `【店舗ルール（絶対守る）】
+- らら横：木曜・土曜は配置禁止。1日1名厳守。高坂・用品は配置禁止。必要日数：20日。
+- 二俣川：1日最大1名厳守（2名以上絶対NG）。土曜・祝日は必ず配置すること。必要日数：13日。
+- らら平：水・木は月を通じて配置禁止（絶対NG）。1〜10日は土・日・祝日のみ2名配置（平日=月・火・金は配置しない・0名）。11日以降は水・木以外の毎日（月・火・金・土・日）必ず2名配置。3名以上は絶対NG。必要日数：30日（延べ人数）。
+- 鶴ヶ峰：1日最大1名。西方がメイン担当。必要日数：12日。土日に配置する場合は必ず二俣川にも誰かが入っている日にすること（絶対条件）。平日は二俣川と同じ日になるべく合わせる（努力目標）。
+- OPA：1日最大1名厳守（2名以上絶対NG）。土曜・祝日は必ず配置すること。必要日数：12日。
+- 蒲田：1日最大1名厳守（2名以上絶対NG）。必要日数：4日。
+- 相武台：黒田専用（黒田以外絶対配置不可）。平日のみ稼働・木曜定休。必要日数：15日。
+- 外兼松：高坂専用（高坂以外絶対配置不可）。1〜10日の平日のみ稼働。必要日数：4日。
+- 大宮：用品・高坂・荻谷のいずれかのみ配置可能。他店舗を優先的に埋めた後、空きがある日に配置する（穴埋め的な位置づけ）。1日最大2名。必要日数：7日以上。
+- 逗子：網野主担当・1日最大1名厳守。補欠は高坂・荻谷のみ可（源・黒田・用品は配置不可）。必要日数：4日。
+- 事務：網野専用（他スタッフは絶対配置不可）。固定日：1日・7日・8日・9日・月末最終日（計5日）。これらの日は必ず網野を「事務」にすること。
+
+【要望】
+- OPAと二俣川はスケジュールの組み方が似ている（繁忙日・土曜・祝日に合わせて両店舗ともしっかり配置する）。
+- 各店舗は必要日数をしっかり埋めること。`;
+
+const DEFAULT_STAFF_RULES = `【スタッフ個別ルール】
+- 網野：1日・7日・8日・9日・月末最終日は必ず「事務」（固定・変更不可）。逗子主担当。月初（2日〜6日の間）にOPAか二俣川に1回顔出し希望。月2回程度休みを入れること。
+- 源：OPA→二俣川→らら横→らら平→逗子の順で優先配置。1〜10日はらら横・OPAを優先。
+- 荻谷：週1日休み。1〜10日はらら横・OPAを優先。月に2回連休（2日以上連続の休み）がほしい。
+- 黒田：月2回休み（木曜以外で）。木曜は毎週休み（相武台も木曜休み）。平日（木以外）は必ず相武台。土曜・日曜は二俣川に入る（固定ではないが優先）。
+- 高坂：月21〜23日あたりに連休希望。らら平メイン。1〜10日の平日は外兼松も担当。蒲田も担当（連勤にならないように）。1〜10日の土日はらら平可。
+- 用品：日曜日のみ出勤。大宮→らら平の優先順位で配置。`;
+
+// ==================== LOAD STATE ====================
+let STAFF  = JSON.parse(localStorage.getItem('shift_staff_v5'))  || DEFAULT_STAFF;
+let STORES = JSON.parse(localStorage.getItem('shift_stores_v6')) || DEFAULT_STORES;
+let storeRulesText = localStorage.getItem('shift_store_rules_v5') || DEFAULT_STORE_RULES;
+let staffRulesText = localStorage.getItem('shift_staff_rules_v5') || DEFAULT_STAFF_RULES;
+
+// Migrate: ensure all store fields exist
+STORES = STORES.map((s,i) => ({
+  id: s.id || 'store_'+i,
+  name: s.name,
+  required: s.required || 10,
+  maxPerDay: s.maxPerDay ?? 1,
+  allowedStaff: s.allowedStaff || [],
+  maxDay: s.maxDay ?? 0,
+  minDay: s.minDay ?? 0,
+  weekdayOnly: s.weekdayOnly ?? false,
+  noWeekdays: s.noWeekdays || [],
+}));
+STAFF = STAFF.map((s,i) => ({
+  id: s.id || 'staff_'+i,
+  name: s.name,
+  fixedRestDow: s.fixedRestDow || [],
+  onlyDow: s.onlyDow ?? -1,
+  maxConsecutive: s.maxConsecutive ?? 5,
+}));
+
+// ==================== RUNTIME STATE ====================
+let holidayMap = {};
+STAFF.forEach(s => { holidayMap[s.id] = new Set(); });
+
+let prevMonthConsec = {}; // { staffId: number } 前月末の連続勤務日数
+STAFF.forEach(s => { prevMonthConsec[s.id] = 0; });
+
+let shiftData = {};
+let originalShift = {};
+let changeHistory = [];
+let modifiedCells = new Set();
+let currentPopupCell = null;
+
+// ==================== COLOR HELPERS ====================
+function getStoreColor(storeName) {
+  const idx = STORES.findIndex(s => s.name === storeName);
+  return STORE_COLORS[idx >= 0 ? idx % STORE_COLORS.length : 0];
+}
+
+function getStoreDotColor(storeName) {
+  return getStoreColor(storeName).text;
+}
+
+// ==================== UTILS ====================
+function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function getDow(y, m, d) { return new Date(y, m-1, d).getDay(); }
+function slugify(name) { return name.replace(/[^a-zA-Z0-9\u3000-\u9fff]/g,'_').toLowerCase() + '_' + Date.now(); }
+
+// ==================== CALENDAR ====================
+function renderCalendars() {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y, m);
+  const list = document.getElementById('staffList');
+  list.innerHTML = '';
+
+  STAFF.forEach(s => {
+    if (!holidayMap[s.id]) holidayMap[s.id] = new Set();
+    const hdays = holidayMap[s.id];
+    const div = document.createElement('div');
+    div.className = 'staff-block';
+
+    let html = `<div class="staff-block-header" onclick="toggleBlock(this)">
+      <span>${s.name}</span>
+      <span style="font-size:10px;color:var(--text-muted)">${hdays.size > 0 ? hdays.size+'日休希望' : '希望なし'}</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="holiday-grid" style="display:none">`;
+
+    // ヘッダー行（月〜日固定）
+    const CAL_HDR = ['月','火','水','木','金','土','日'];
+    CAL_HDR.forEach((h,i) => {
+      const cls = i===5?' sat':i===6?' sun':'';
+      html += `<div class="cal-hdr${cls}">${h}</div>`;
+    });
+
+    // 1日の曜日に合わせて空白パディング（月=0,火=1,...,日=6）
+    const firstDow = getDow(y, m, 1); // 0=日,1=月,...,6=土
+    const offset = (firstDow + 6) % 7; // 月曜始まりに変換
+    for (let i = 0; i < offset; i++) {
+      html += `<div class="day-cell" style="visibility:hidden;pointer-events:none"></div>`;
+    }
+
+    for (let d = 1; d <= days; d++) {
+      const dow = getDow(y, m, d);
+      const isHol = hdays.has(d);
+      const sc = dow===0?' sun':(dow===6?' sat':'');
+      html += `<div class="day-cell${sc}${isHol?' holiday':''}" onclick="toggleHol('${s.id}',${d},this,event)">
+        <span class="dn">${d}</span><span class="dw">${DOW[dow]}</span>
+      </div>`;
+    }
+    html += '</div>';
+    div.innerHTML = html;
+    list.appendChild(div);
+  });
+  renderPrevConsecList();
+}
+
+function toggleBlock(header) {
+  header.classList.toggle('open');
+  const grid = header.nextElementSibling;
+  grid.style.display = grid.style.display==='none' ? 'grid' : 'none';
+}
+
+function toggleHol(staffId, day, el, e) {
+  e.stopPropagation();
+  if (!holidayMap[staffId]) holidayMap[staffId] = new Set();
+  const set = holidayMap[staffId];
+  if (set.has(day)) { set.delete(day); el.classList.remove('holiday'); }
+  else { set.add(day); el.classList.add('holiday'); }
+  const block = el.closest('.staff-block');
+  const meta = block.querySelector('.staff-block-header span:nth-child(2)');
+  meta.textContent = set.size > 0 ? set.size+'日休希望' : '希望なし';
+}
+
+// ==================== PREV MONTH CONSEC UI ====================
+function renderPrevConsecList() {
+  const container = document.getElementById('prevConsecList');
+  if (!container) return;
+  container.innerHTML = '';
+  STAFF.forEach(s => {
+    const val = prevMonthConsec[s.id] || 0;
+    const maxC = s.maxConsecutive ?? 5;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    row.innerHTML = `
+      <span style="font-size:12px;font-weight:700;min-width:42px">${s.name}</span>
+      <input type="number" min="0" max="${maxC}" value="${val}"
+        style="width:60px;padding:4px 8px;font-size:12px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text)"
+        onchange="prevMonthConsec['${s.id}']=Math.min(+this.value,${maxC});this.value=prevMonthConsec['${s.id}']">
+      <span style="font-size:11px;color:var(--text-muted)">日（上限${maxC}勤）</span>`;
+    container.appendChild(row);
+  });
+}
+
+// ==================== BUILD PROMPT ====================
+function buildConsecutiveText() {
+  let out = '\n【連勤ルール】\n';
+  out += '- 最大連続勤務日数：原則5勤まで（黒田のみ6勤OK）\n';
+  out += '- 連勤上限を超えないよう必ず休みを入れること\n';
+  out += '- 「事務」は連勤カウントに含めない（休みと同じ扱い）\n';
+  const carried = STAFF.filter(s => (prevMonthConsec[s.id] || 0) > 0);
+  if (carried.length > 0) {
+    out += '- 前月末からの連勤持ち越し：';
+    out += carried.map(s => `${s.name}が${prevMonthConsec[s.id]}日連続出勤済み`).join('、');
+    out += '\n  ※ 1日目から上記の日数が加算された状態でカウントすること\n';
+  }
+  return out;
+}
+
+function buildAutoConstraintsText() {
+  let out = '\n【構造化制約（自動生成）】\n';
+  STORES.forEach(s => {
+    const parts = [];
+    if (s.maxPerDay > 0) parts.push(`1日最大${s.maxPerDay}名`);
+    if (s.allowedStaff && s.allowedStaff.length > 0) parts.push(`配置可：${s.allowedStaff.join('・')}のみ`);
+    if (s.maxDay > 0) parts.push(`${s.maxDay}日まで`);
+    if (s.minDay > 0) parts.push(`${s.minDay}日以降のみ`);
+    if (s.weekdayOnly) parts.push('平日のみ');
+    if (s.noWeekdays && s.noWeekdays.length > 0) parts.push(`${s.noWeekdays.map(d=>DOW[d]).join('・')}曜禁止`);
+    parts.push(`必要日数：${s.required}日`);
+    out += `- ${s.name}：${parts.join('、')}\n`;
+  });
+
+  out += '\n【スタッフ制約（自動生成）】\n';
+  STAFF.forEach(s => {
+    const parts = [];
+    if (s.fixedRestDow && s.fixedRestDow.length > 0) parts.push(`毎${s.fixedRestDow.map(d=>DOW[d]).join('・')}は必ず休み`);
+    if (parts.length > 0) out += `- ${s.name}：${parts.join('、')}\n`;
+  });
+  return out;
+}
+
+// ==================== GENERATE ====================
+async function generateShift() {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y, m);
+  const extra = document.getElementById('extraNote').value;
+
+  let holidayInfo = '\n【休日希望】\n';
+  STAFF.forEach(s => {
+    const hd = [...(holidayMap[s.id]||new Set())].sort((a,b)=>a-b);
+    holidayInfo += `- ${s.name}：${hd.length ? hd.join(', ')+'日' : '希望なし'}\n`;
+  });
+
+  let calInfo = `\n【${y}年${m}月カレンダー】\n`;
+  for (let d=1;d<=days;d++) calInfo += `${d}日(${DOW[getDow(y,m,d)]}) `;
+
+  const storeNames = STORES.map(s=>s.name).join(', ');
+  const staffNames = STAFF.map(s=>s.name).join(', ');
+
+  const prompt = `あなたはシフト作成の専門家です。${y}年${m}月のシフトを作成してください。
+
+${storeRulesText}
+${staffRulesText}
+${buildAutoConstraintsText()}
+${buildConsecutiveText()}
+${holidayInfo}
+${calInfo}
+${extra ? '\n【追加指示】\n'+extra : ''}
+
+【重要：出力形式】
+JSONのみ出力。前置き・説明・コードブロック記号は不要。
+
+{
+  "shift": {
+    ${STAFF.map(s=>`"${s.name}": {"1":"休","2":"休",...}`).join(',\n    ')}
+  },
+  "violations": [],
+  "notes": "メモ"
+}
+
+- 1日〜${days}日まで全員分必ず記載
+- 出勤日は店舗名、休みは「休」
+- 店舗名表記：${storeNames}
+- スタッフ：${staffNames}
+- 各店舗の必要日数を満たすこと（延べ人数）
+- 定員オーバーは絶対NG
+- JSONのみ出力`;
+
+  const apiKey = localStorage.getItem('gemini_api_key') || '';
+  if (!apiKey) {
+    alert('Gemini APIキーを入力して「保存」してください。');
+    return;
+  }
+
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  overlay.classList.add('show');
+  document.getElementById('btnGen').disabled = true;
+
+  const msgs = ['ルールを解析中...','スタッフ条件を確認中...','店舗割り当て計算中...','最適化しています...','もう少しで完成...'];
+  let li = 0;
+  const iv = setInterval(() => { loadingText.textContent = msgs[li=(li+1)%msgs.length]; }, 2200);
+
+  try {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`;
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-goog-api-key': apiKey },
+      body:JSON.stringify({
+        contents:[{ parts:[{ text: prompt }] }],
+        generationConfig:{
+          maxOutputTokens: 65536,
+          responseMimeType: 'application/json'
+        }
+      })
+    });
+    const data = await res.json();
+    clearInterval(iv);
+    overlay.classList.remove('show');
+    document.getElementById('btnGen').disabled = false;
+
+    if (data.error) throw new Error(data.error.message || 'APIエラー');
+
+    // finishReasonが MAX_TOKENS の場合は切れている
+    const finishReason = data.candidates?.[0]?.finishReason;
+    if (finishReason === 'MAX_TOKENS') {
+      throw new Error('レスポンスがトークン上限で切れました。追加指示を減らすか、スタッフ・店舗数を確認してください。');
+    }
+
+    const raw = (data.candidates?.[0]?.content?.parts || []).map(p=>p.text||'').join('');
+    if (!raw) throw new Error('Geminiからの応答が空でした。APIキーや利用制限を確認してください。');
+
+    let parsed;
+    try { parsed = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
+    catch { const m2=raw.match(/\{[\s\S]*\}/); if(!m2) throw new Error('JSONパース失敗: ' + raw.slice(0,200)); parsed=JSON.parse(m2[0]); }
+
+    shiftData = parsed.shift || {};
+    originalShift = JSON.parse(JSON.stringify(shiftData));
+    changeHistory = [];
+    modifiedCells = new Set();
+    clearStoreHighlight();
+
+    renderShiftTable(y, m, days);
+    renderStores(y, m, days);
+    checkViolations(y, m, days, parsed.violations||[], parsed.notes||'');
+    document.getElementById('exportRow').style.display = 'flex';
+    document.getElementById('btnUndo').style.display = 'none';
+    document.getElementById('changeCount').textContent = '';
+    document.getElementById('storePanel').style.display = 'block';
+    document.getElementById('violPanel').style.display = 'block';
+
+  } catch(err) {
+    clearInterval(iv);
+    overlay.classList.remove('show');
+    document.getElementById('btnGen').disabled = false;
+    alert('生成エラー: ' + err.message);
+  }
+}
+
+// ==================== RENDER TABLE ====================
+function renderShiftTable(y, m, days) {
+  const area = document.getElementById('shiftArea');
+  let html = document.body.classList.contains('admin-mode')
+    ? `<div class="edit-hint">✏️ セルをクリックして店舗を変更できます｜<span style="color:var(--accent2)">オレンジ枠</span>＝手動変更済み</div>`
+    : '';
+  html += `<div class="shift-outer"><table class="shift-table"><thead><tr>`;
+  html += `<th class="staff-col" style="min-width:60px">スタッフ</th>`;
+  html += `<th class="work-col" style="min-width:36px">稼働</th>`;
+  for (let d=1;d<=days;d++) {
+    const dow = getDow(y,m,d);
+    const cls = dow===0?' class="sun-h"':(dow===6?' class="sat-h"':'');
+    html += `<th${cls} style="min-width:64px">${d}<br><span style="font-size:9px;font-weight:400">${DOW[dow]}</span></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  STAFF.forEach(s => {
+    const ss = shiftData[s.name] || {};
+    let work = 0;
+    for (let d=1;d<=days;d++) { if(ss[String(d)] && ss[String(d)]!=='休') work++; }
+    html += '<tr>';
+    html += `<td class="staff-col">${s.name}</td>`;
+    html += `<td class="work-col" id="work_${s.name}">${work}</td>`;
+    for (let d=1;d<=days;d++) {
+      const val = ss[String(d)] || '休';
+      const dow = getDow(y,m,d);
+      const dayClass = dow===0?' sun-col':(dow===6?' sat-col':'');
+      const isModified = modifiedCells.has(`${s.name}-${d}`);
+      html += `<td class="${dayClass}" id="cell_${s.name}_${d}" onclick="openPopup('${s.name}',${d},event)">${renderCellContent(val,isModified)}</td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+}
+
+function renderCellContent(val, isModified) {
+  if (!val || val==='休') return `<span class="shift-cell rest${isModified?' modified':''}">休</span>`;
+  const c = getStoreColor(val);
+  return `<span class="shift-cell${isModified?' modified':''}" style="background:${c.bg};color:${c.text}">${val}</span>`;
+}
+
+// ==================== POPUP ====================
+function openPopup(staffName, day, e) {
+  if (!document.body.classList.contains('admin-mode')) return;
+  e.stopPropagation();
+  currentPopupCell = { staffName, day };
+  const popup = document.getElementById('storePopup');
+  const currentVal = (shiftData[staffName]||{})[String(day)] || '休';
+  let html = `<div class="popup-title">${staffName} ${day}日</div>`;
+  html += `<div class="popup-item" onclick="setCell('${staffName}',${day},'休')"><span class="dot-s" style="background:#7a7a9a"></span> 休み${currentVal==='休'?' ✓':''}</div>`;
+  html += `<div class="popup-divider"></div>`;
+  STORES.forEach(store => {
+    const color = getStoreDotColor(store.name);
+    html += `<div class="popup-item" onclick="setCell('${staffName}',${day},'${store.name}')"><span class="dot-s" style="background:${color}"></span>${store.name}${currentVal===store.name?' ✓':''}</div>`;
+  });
+  popup.innerHTML = html;
+  popup.style.display = 'block';
+  const rect = e.target.closest('td').getBoundingClientRect();
+  let left = rect.left + window.scrollX;
+  let top  = rect.bottom + window.scrollY + 4;
+  if (left + 150 > window.innerWidth) left = window.innerWidth - 160;
+  if (top + 320 > window.innerHeight + window.scrollY) top = rect.top + window.scrollY - 320;
+  popup.style.left = left+'px';
+  popup.style.top  = top+'px';
+}
+
+function setCell(staffName, day, newVal) {
+  document.getElementById('storePopup').style.display = 'none';
+  if (!shiftData[staffName]) shiftData[staffName] = {};
+  const oldVal = shiftData[staffName][String(day)] || '休';
+  if (oldVal===newVal) return;
+  changeHistory.push({ staffName, day, oldVal, newVal });
+  shiftData[staffName][String(day)] = newVal;
+  modifiedCells.add(`${staffName}-${day}`);
+  const cell = document.getElementById(`cell_${staffName}_${day}`);
+  if (cell) cell.innerHTML = renderCellContent(newVal, true);
+  updateWorkCount(staffName);
+  document.getElementById('changeCount').textContent = `手動変更：${changeHistory.length}件`;
+  document.getElementById('btnUndo').style.display = 'inline-block';
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y,m);
+  checkViolations(y, m, days, [], '');
+  renderStores(y, m, days);
+}
+
+function updateWorkCount(staffName) {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y,m);
+  const ss = shiftData[staffName] || {};
+  let work = 0;
+  for (let d=1;d<=days;d++) { if(ss[String(d)] && ss[String(d)]!=='休') work++; }
+  const wc = document.getElementById(`work_${staffName}`);
+  if (wc) wc.textContent = work;
+}
+
+function undoLastChange() {
+  if (!changeHistory.length) return;
+  const { staffName, day, oldVal } = changeHistory.pop();
+  if (!shiftData[staffName]) shiftData[staffName] = {};
+  shiftData[staffName][String(day)] = oldVal;
+  const stillMod = changeHistory.some(c=>c.staffName===staffName&&c.day===day);
+  if (!stillMod) modifiedCells.delete(`${staffName}-${day}`);
+  const cell = document.getElementById(`cell_${staffName}_${day}`);
+  if (cell) cell.innerHTML = renderCellContent(oldVal, modifiedCells.has(`${staffName}-${day}`));
+  updateWorkCount(staffName);
+  document.getElementById('changeCount').textContent = changeHistory.length>0?`手動変更：${changeHistory.length}件`:'';
+  if (!changeHistory.length) document.getElementById('btnUndo').style.display = 'none';
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y,m);
+  checkViolations(y, m, days, [], '');
+  renderStores(y, m, days);
+}
+
+// ==================== STORES ====================
+function renderStores(y, m, days) {
+  const area = document.getElementById('storeArea');
+  const counts = {};
+  STORES.forEach(s => { counts[s.name] = 0; });
+  STAFF.forEach(s => {
+    const ss = shiftData[s.name] || {};
+    for (let d=1;d<=days;d++) {
+      const v = ss[String(d)];
+      if (v && v!=='休' && counts[v]!==undefined) counts[v]++;
+    }
+  });
+  let html = '<div class="store-grid">';
+  STORES.forEach(store => {
+    const got = counts[store.name] || 0;
+    const c = getStoreColor(store.name);
+    // required:0 の店舗（事務など）は達成判定なし・薄く表示
+    if (store.required === 0) {
+      html += `<div class="store-card" data-store="${store.name}" onclick="highlightStore('${store.name}')" style="border-left:3px solid ${c.text};opacity:0.55">
+        <div class="sc-name">${store.name}</div>
+        <div class="sc-num" style="color:${c.text}">${got}</div>
+        <div style="font-size:11px;margin-top:3px;color:var(--text-muted)">日数制限なし</div>
+      </div>`;
+      return;
+    }
+    const diff = got - store.required;
+    const cls = diff===0?'ok':(diff>0?'over':'under');
+    const diffText = diff===0?'✓ 達成':(diff>0?`+${diff} 超過`:`${diff} 不足`);
+    html += `<div class="store-card ${cls}" data-store="${store.name}" onclick="highlightStore('${store.name}')" style="border-left:3px solid ${c.text}">
+      <div class="sc-name">${store.name}</div>
+      <div class="sc-num">${got}<span style="font-size:13px;color:var(--text-muted)">/${store.required}</span></div>
+      <div style="font-size:11px;margin-top:3px;color:${cls==='ok'?'var(--success)':(cls==='over'?'var(--danger)':'var(--warning)')}">${diffText}</div>
+    </div>`;
+  });
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+// ==================== STORE HIGHLIGHT ====================
+let _highlightedStore = null;
+
+function highlightStore(storeName) {
+  if (_highlightedStore === storeName) {
+    clearStoreHighlight();
+    return;
+  }
+  _highlightedStore = storeName;
+
+  // セルにクラスを適用
+  document.querySelectorAll('.shift-cell').forEach(el => {
+    const isMatch = el.textContent.trim() === storeName;
+    el.classList.toggle('hl-match', isMatch);
+    el.classList.toggle('hl-dim',  !isMatch && !el.classList.contains('rest'));
+  });
+
+  // カードのアクティブ状態
+  document.querySelectorAll('.store-card').forEach(card => {
+    card.classList.toggle('store-active', card.dataset.store === storeName);
+  });
+
+  // 最初のマッチセルまでスクロール
+  const first = document.querySelector('.shift-cell.hl-match');
+  if (first) {
+    first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  }
+}
+
+function clearStoreHighlight() {
+  _highlightedStore = null;
+  document.querySelectorAll('.shift-cell').forEach(el => {
+    el.classList.remove('hl-match', 'hl-dim');
+  });
+  document.querySelectorAll('.store-card').forEach(card => {
+    card.classList.remove('store-active');
+  });
+}
+
+// ==================== VIOLATIONS ====================
+function checkViolations(y, m, days, aiViolations, notes) {
+  const viols = [...aiViolations];
+  const storeMap = {};
+  STORES.forEach(s => { storeMap[s.name] = s; });
+  const staffMap = {};
+  STAFF.forEach(s => { staffMap[s.name] = s; });
+
+  // Per-cell checks
+  STAFF.forEach(staff => {
+    const ss = shiftData[staff.name] || {};
+    for (let d=1;d<=days;d++) {
+      const val = ss[String(d)];
+      const dow = getDow(y, m, d);
+      if (!val || val==='休') continue;
+
+      // Staff: fixed rest day of week
+      if (staff.fixedRestDow && staff.fixedRestDow.includes(dow)) {
+        viols.push(`❌ ${staff.name} ${d}日(${DOW[dow]})：毎${DOW[dow]}は必ず休み`);
+      }
+
+      const store = storeMap[val];
+      if (!store) continue;
+
+      // Store: allowed staff only
+      if (store.allowedStaff && store.allowedStaff.length > 0 && !store.allowedStaff.includes(staff.name)) {
+        viols.push(`❌ ${staff.name} ${d}日：${val}は${store.allowedStaff.join('・')}のみ配置可`);
+      }
+      // Store: no specific weekdays
+      if (store.noWeekdays && store.noWeekdays.includes(dow)) {
+        viols.push(`⚠ ${staff.name} ${d}日(${DOW[dow]})：${val}は${DOW[dow]}曜配置不可`);
+      }
+      // Store: max day limit
+      if (store.maxDay > 0 && d > store.maxDay) {
+        viols.push(`❌ ${staff.name} ${d}日：${val}は${store.maxDay}日までのみ稼働`);
+      }
+      // Store: min day
+      if (store.minDay > 0 && d < store.minDay) {
+        viols.push(`❌ ${staff.name} ${d}日：${val}は${store.minDay}日以降のみ稼働`);
+      }
+      // Store: weekday only
+      if (store.weekdayOnly && (dow===0||dow===6)) {
+        viols.push(`❌ ${staff.name} ${d}日：${val}は平日のみ稼働（土日NG）`);
+      }
+    }
+  });
+
+  // 連勤チェック
+  STAFF.forEach(staff => {
+    const ss = shiftData[staff.name] || {};
+    const maxC = staff.maxConsecutive ?? 5;
+    let consec = prevMonthConsec[staff.id] || 0;
+    for (let d = 1; d <= days; d++) {
+      const val = ss[String(d)];
+      const isWork = val && val !== '休' && val !== '事務'; // 事務は連勤カウント外
+      if (isWork) {
+        consec++;
+        if (consec > maxC) {
+          viols.push(`⚠ ${staff.name} ${d}日：連続${consec}勤（上限${maxC}勤）`);
+        }
+      } else {
+        consec = 0;
+      }
+    }
+  });
+
+  // Per-day max staff check
+  for (let d=1;d<=days;d++) {
+    STORES.forEach(store => {
+      if (!store.maxPerDay || store.maxPerDay <= 0) return;
+      let count = 0;
+      STAFF.forEach(s => { if ((shiftData[s.name]||{})[String(d)]===store.name) count++; });
+      if (count > store.maxPerDay) viols.push(`❌ ${d}日：${store.name}に${count}名配置（最大${store.maxPerDay}名）`);
+    });
+  }
+
+  const badge = document.getElementById('violBadge');
+  if (viols.length===0) { badge.textContent='✓'; badge.className='badge-count ok'; }
+  else { badge.textContent=viols.length; badge.className='badge-count'; }
+
+  const area = document.getElementById('violationArea');
+  if (viols.length===0) {
+    area.innerHTML = `<div class="viol-list"><div style="padding:24px;text-align:center;color:#4ade9a;font-size:13px">✅ ルール違反は検出されませんでした</div></div>`;
+  } else {
+    let html = '<div class="viol-list">';
+    viols.forEach(v => {
+      const cls = v.includes('⚠')?'warn':(v.includes('注意')||v.includes('推奨')?'info':'');
+      html += `<div class="viol-item ${cls}">${v}</div>`;
+    });
+    html += '</div>';
+    area.innerHTML = html;
+  }
+  if (notes) {
+    const ni = document.createElement('div');
+    ni.className = 'info-note';
+    ni.textContent = '💬 ' + notes;
+    document.getElementById('violationArea').appendChild(ni);
+  }
+}
+
+// ==================== TABS ====================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',['shift','stores','violations'][i]===name));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id===`tab-${name}`));
+}
+
+// ==================== CSV ====================
+function exportCSV() {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const days = getDaysInMonth(y,m);
+  let csv = '氏名,';
+  for (let d=1;d<=days;d++) csv += `${d}日(${DOW[getDow(y,m,d)]}),`;
+  csv += '稼働日数\n';
+  STAFF.forEach(s => {
+    const ss = shiftData[s.name] || {};
+    let work=0, row=`${s.name},`;
+    for (let d=1;d<=days;d++) { const v=ss[String(d)]||'休'; if(v!=='休') work++; row+=`${v},`; }
+    csv += row + work + '\n';
+  });
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`shift_${y}${String(m).padStart(2,'0')}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ==================== ADMIN MODAL ====================
+let adminEditing = { staff: [], stores: [] };
+
+function openAdmin() {
+  // Deep copy current data
+  adminEditing.staff  = JSON.parse(JSON.stringify(STAFF));
+  adminEditing.stores = JSON.parse(JSON.stringify(STORES));
+
+  document.getElementById('adminStoreRules').value = storeRulesText;
+  document.getElementById('adminStaffRules').value = staffRulesText;
+
+  renderStaffAdminTable();
+  renderStoreAdminTable();
+  switchAdminTab('staff');
+  document.getElementById('adminModal').classList.add('show');
+}
+
+function closeAdmin() {
+  document.getElementById('adminModal').classList.remove('show');
+}
+
+function handleModalClick(e) {
+  if (e.target === document.getElementById('adminModal')) closeAdmin();
+}
+
+function switchAdminTab(name) {
+  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active',['staff','stores','rules','api'][i]===name));
+  document.querySelectorAll('.modal-tab-content').forEach(tc => tc.classList.toggle('active', tc.id===`adminTab-${name}`));
+}
+
+// ---- Staff admin ----
+function renderStaffAdminTable() {
+  const tbody = document.getElementById('staffAdminBody');
+  tbody.innerHTML = '';
+  adminEditing.staff.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${s.name}" onchange="adminEditing.staff[${idx}].name=this.value" style="width:90px"></td>
+      <td>
+        <div class="dow-checks" id="fixedRest_${idx}">
+          ${DOW.map((d,i)=>`<label class="dow-check"><input type="checkbox" ${(s.fixedRestDow||[]).includes(i)?'checked':''} onchange="updateFixedRest(${idx})">${d}</label>`).join('')}
+        </div>
+      </td>
+      <td>
+        <input type="number" min="1" max="14" value="${s.maxConsecutive ?? 5}"
+          onchange="adminEditing.staff[${idx}].maxConsecutive=+this.value"
+          style="width:52px;text-align:center">
+      </td>
+      <td><button class="btn-sm danger" onclick="removeStaff(${idx})" style="padding:3px 8px;font-size:11px">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateFixedRest(idx) {
+  const container = document.getElementById(`fixedRest_${idx}`);
+  const checked = [];
+  container.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => { if(cb.checked) checked.push(i); });
+  adminEditing.staff[idx].fixedRestDow = checked;
+}
+
+function addStaff() {
+  const name = document.getElementById('newStaffName').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  adminEditing.staff.push({ id: 'staff_'+Date.now(), name, fixedRestDow: [], onlyDow: -1 });
+  document.getElementById('newStaffName').value = '';
+  renderStaffAdminTable();
+}
+
+function removeStaff(idx) {
+  if (!confirm(`「${adminEditing.staff[idx].name}」を削除しますか？`)) return;
+  adminEditing.staff.splice(idx, 1);
+  renderStaffAdminTable();
+}
+
+// ---- Store admin ----
+function renderStoreAdminTable() {
+  const tbody = document.getElementById('storeAdminBody');
+  tbody.innerHTML = '';
+  adminEditing.stores.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    const operVal = s.maxDay > 0 ? (s.weekdayOnly ? '1-10-wkday' : '1-10') : (s.minDay > 0 ? '11-' : 'all');
+    tr.innerHTML = `
+      <td><input type="text" value="${s.name}" onchange="adminEditing.stores[${idx}].name=this.value" style="width:80px"></td>
+      <td class="col-narrow"><input type="number" value="${s.required}" min="1" max="100" onchange="adminEditing.stores[${idx}].required=+this.value" style="width:60px"></td>
+      <td class="col-narrow"><input type="number" value="${s.maxPerDay??1}" min="1" max="10" onchange="adminEditing.stores[${idx}].maxPerDay=+this.value" style="width:50px"></td>
+      <td class="col-mid"><input type="text" value="${(s.allowedStaff||[]).join(',')}" placeholder="空欄=全員" onchange="adminEditing.stores[${idx}].allowedStaff=this.value.split(',').map(x=>x.trim()).filter(Boolean)" style="width:110px"></td>
+      <td class="col-narrow">
+        <select onchange="applyOperating(${idx},this.value)" style="width:90px">
+          <option value="all"     ${operVal==='all'?'selected':''}>全日</option>
+          <option value="1-10"    ${operVal==='1-10'?'selected':''}>1〜10日</option>
+          <option value="1-10-wkday" ${operVal==='1-10-wkday'?'selected':''}>1-10平日</option>
+          <option value="11-"     ${operVal==='11-'?'selected':''}>11日以降</option>
+        </select>
+      </td>
+      <td class="col-mid">
+        <div class="dow-checks" id="noWkday_${idx}">
+          ${DOW.map((d,i)=>`<label class="dow-check"><input type="checkbox" ${(s.noWeekdays||[]).includes(i)?'checked':''} onchange="updateNoWeekdays(${idx})">${d}</label>`).join('')}
+        </div>
+      </td>
+      <td><button class="btn-sm danger" onclick="removeStore(${idx})" style="padding:3px 8px;font-size:11px">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function applyOperating(idx, val) {
+  if (val==='all')        { adminEditing.stores[idx].maxDay=0; adminEditing.stores[idx].minDay=0; adminEditing.stores[idx].weekdayOnly=false; }
+  else if (val==='1-10')  { adminEditing.stores[idx].maxDay=10; adminEditing.stores[idx].minDay=0; adminEditing.stores[idx].weekdayOnly=false; }
+  else if (val==='1-10-wkday') { adminEditing.stores[idx].maxDay=10; adminEditing.stores[idx].minDay=0; adminEditing.stores[idx].weekdayOnly=true; }
+  else if (val==='11-')   { adminEditing.stores[idx].maxDay=0; adminEditing.stores[idx].minDay=11; adminEditing.stores[idx].weekdayOnly=false; }
+}
+
+function updateNoWeekdays(idx) {
+  const container = document.getElementById(`noWkday_${idx}`);
+  const checked = [];
+  container.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => { if(cb.checked) checked.push(i); });
+  adminEditing.stores[idx].noWeekdays = checked;
+}
+
+function addStore() {
+  const name = document.getElementById('newStoreName').value.trim();
+  const req  = +document.getElementById('newStoreReq').value;
+  if (!name) { alert('店舗名を入力してください'); return; }
+  adminEditing.stores.push({ id:'store_'+Date.now(), name, required:req, maxPerDay:1, allowedStaff:[], maxDay:0, minDay:0, weekdayOnly:false, noWeekdays:[] });
+  document.getElementById('newStoreName').value = '';
+  document.getElementById('newStoreReq').value  = '10';
+  renderStoreAdminTable();
+}
+
+function removeStore(idx) {
+  if (!confirm(`「${adminEditing.stores[idx].name}」を削除しますか？`)) return;
+  adminEditing.stores.splice(idx, 1);
+  renderStoreAdminTable();
+}
+
+// ---- Save ----
+function saveAdmin() {
+  // Collect latest name values from inputs before saving
+  document.querySelectorAll('#staffAdminBody tr').forEach((tr, idx) => {
+    const input = tr.querySelector('input[type="text"]');
+    if (input && adminEditing.staff[idx]) adminEditing.staff[idx].name = input.value.trim();
+  });
+  document.querySelectorAll('#storeAdminBody tr').forEach((tr, idx) => {
+    const input = tr.querySelector('input[type="text"]');
+    if (input && adminEditing.stores[idx]) adminEditing.stores[idx].name = input.value.trim();
+    const numInputs = tr.querySelectorAll('input[type="number"]');
+    if (numInputs[0] && adminEditing.stores[idx]) adminEditing.stores[idx].required = +numInputs[0].value;
+    if (numInputs[1] && adminEditing.stores[idx]) adminEditing.stores[idx].maxPerDay = +numInputs[1].value;
+  });
+
+  STAFF  = adminEditing.staff;
+  STORES = adminEditing.stores;
+  storeRulesText = document.getElementById('adminStoreRules').value;
+  staffRulesText = document.getElementById('adminStaffRules').value;
+
+  localStorage.setItem('shift_staff_v5',  JSON.stringify(STAFF));
+  localStorage.setItem('shift_stores_v6', JSON.stringify(STORES));
+  localStorage.setItem('shift_store_rules_v5', storeRulesText);
+  localStorage.setItem('shift_staff_rules_v5', staffRulesText);
+
+  // Reset holiday map / prevConsec for new/removed staff
+  const newMap = {};
+  const newConsec = {};
+  STAFF.forEach(s => {
+    newMap[s.id]    = holidayMap[s.id] || new Set();
+    newConsec[s.id] = prevMonthConsec[s.id] || 0;
+  });
+  holidayMap = newMap;
+  prevMonthConsec = newConsec;
+
+  closeAdmin();
+  renderCalendars();
+  alert('設定を保存しました。');
+}
+
+// ==================== API KEY ====================
+function saveApiKey() {
+  const key = document.getElementById('geminiApiKey').value.trim();
+  if (!key) { alert('APIキーを入力してください'); return; }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('geminiApiKey').value = '';
+  showApiKeyStatus();
+  alert('APIキーを保存しました。');
+}
+
+function showApiKeyStatus() {
+  const key = localStorage.getItem('gemini_api_key') || '';
+  const el = document.getElementById('apiKeyStatus');
+  if (key) {
+    const masked = key.substring(0,6) + '••••••••' + key.slice(-4);
+    el.innerHTML = `<span style="color:var(--success)">✓ 設定済み：${masked}</span> <button class="btn-sm danger" onclick="clearApiKey()" style="padding:2px 7px;font-size:10px;margin-left:6px">削除</button>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--warning)">⚠ 未設定</span>`;
+  }
+}
+
+function clearApiKey() {
+  if (!confirm('APIキーを削除しますか？')) return;
+  localStorage.removeItem('gemini_api_key');
+  showApiKeyStatus();
+}
+
+// ==================== ADMIN MODE ====================
+const DEFAULT_ADMIN_PW = 'admin';
+
+function initAdminMode() {
+  if (!localStorage.getItem('admin_password')) {
+    localStorage.setItem('admin_password', DEFAULT_ADMIN_PW);
+  }
+  if (sessionStorage.getItem('admin_unlocked') === '1') {
+    document.body.classList.add('admin-mode');
+    updateLockBtn(true);
+  }
+}
+
+function handleLockBtn() {
+  if (document.body.classList.contains('admin-mode')) {
+    lockAdmin();
+  } else {
+    openPwModal();
+  }
+}
+
+function openPwModal() {
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').textContent = '';
+  document.getElementById('pwModal').classList.add('show');
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+}
+
+function closePwModal() {
+  document.getElementById('pwModal').classList.remove('show');
+}
+
+function doUnlockAdmin() {
+  const pw = document.getElementById('pwInput').value;
+  const stored = localStorage.getItem('admin_password') || DEFAULT_ADMIN_PW;
+  if (pw === stored) {
+    document.body.classList.add('admin-mode');
+    sessionStorage.setItem('admin_unlocked', '1');
+    updateLockBtn(true);
+    closePwModal();
+    if (Object.keys(shiftData).length > 0) {
+      document.getElementById('exportRow').style.display = 'flex';
+    }
+  } else {
+    document.getElementById('pwError').textContent = 'パスワードが違います';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+
+function lockAdmin() {
+  if (!confirm('管理者モードを終了しますか？')) return;
+  document.body.classList.remove('admin-mode');
+  sessionStorage.removeItem('admin_unlocked');
+  updateLockBtn(false);
+  document.getElementById('storePopup').style.display = 'none';
+  closeAdmin();
+}
+
+function updateLockBtn(isAdmin) {
+  const btn = document.getElementById('btnLock');
+  if (isAdmin) {
+    btn.textContent = '🔓 管理者モード終了';
+    btn.classList.add('unlocked');
+  } else {
+    btn.textContent = '🔒 管理者ログイン';
+    btn.classList.remove('unlocked');
+  }
+}
+
+function changeAdminPassword() {
+  const np = document.getElementById('newAdminPw').value;
+  const nc = document.getElementById('newAdminPwConfirm').value;
+  if (!np) { alert('新しいパスワードを入力してください'); return; }
+  if (np !== nc) { alert('パスワードが一致しません'); return; }
+  localStorage.setItem('admin_password', np);
+  document.getElementById('newAdminPw').value = '';
+  document.getElementById('newAdminPwConfirm').value = '';
+  alert('パスワードを変更しました');
+}
+
+// ==================== INIT ====================
+document.addEventListener('click', e => {
+  if (!e.target.closest('#storePopup')) document.getElementById('storePopup').style.display = 'none';
+});
+document.getElementById('year').addEventListener('change', renderCalendars);
+document.getElementById('month').addEventListener('change', renderCalendars);
+initAdminMode();
+renderCalendars();
+renderPrevConsecList();
+showApiKeyStatus();
+</script>
+</body>
+</html>
