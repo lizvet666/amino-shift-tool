@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シフト閲覧 | Amino-YA</title>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, doc, getDoc, collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAm30tcmi5Sqm2X8FKoMLqlhjWySiEnRM",
+    authDomain: "amino-shift.firebaseapp.com",
+    projectId: "amino-shift",
+    storageBucket: "amino-shift.firebasestorage.app",
+    messagingSenderId: "1086205668210",
+    appId: "1:1086205668210:web:c7f6ea4d575bed35b73d8b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  window._fbDb = db;
+  window._fbGetDoc = getDoc;
+  window._fbDoc = doc;
+  window._fbCollection = collection;
+  window._fbGetDocs = getDocs;
+  window._fbQuery = query;
+  window._fbOrderBy = orderBy;
+  window._fbReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface2: #f8f9fc;
+  --border: #e2e6f0;
+  --accent: #e8520a;
+  --accent-mid: #c94408;
+  --accent3: #2563eb;
+  --text: #1a1f36;
+  --text-muted: #64748b;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; min-height: 100vh; }
+.container { max-width: 100%; padding: 16px 20px; }
+
+header {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 20px; padding-bottom: 14px;
+  border-bottom: 2px solid var(--border); flex-wrap: wrap;
+}
+.logo {
+  font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent);
+  letter-spacing: 0.2em; background: rgba(232,82,10,0.08); padding: 4px 10px;
+  border-radius: 4px; border: 1px solid rgba(232,82,10,0.25); font-weight: 700;
+}
+h1 { font-size: 20px; font-weight: 700; }
+h1 span { color: var(--accent); }
+
+.month-select-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.month-select-wrap label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+select#monthSelect {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: inherit;
+  outline: none; cursor: pointer; transition: border-color 0.2s;
+}
+select#monthSelect:focus { border-color: var(--accent); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.section-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.section-title { color: var(--text); font-size: 13px; }
+.pub-info { font-size: 11px; color: var(--text-muted); padding: 8px 14px; border-bottom: 1px solid var(--border); background: rgba(232,82,10,0.03); }
+
+.shift-outer { overflow-x: auto; }
+.shift-table { border-collapse: collapse; font-size: 11px; width: 100%; }
+.shift-table th {
+  background: var(--surface2); padding: 7px 3px; text-align: center;
+  font-weight: 700; border-bottom: 2px solid var(--border); border-right: 1px solid var(--border);
+  white-space: nowrap; position: sticky; top: 0; z-index: 10; color: var(--text);
+}
+.shift-table th.staff-col {
+  position: sticky; top: 0; left: 0; z-index: 20; background: var(--surface2);
+  text-align: left; padding-left: 10px; border-right: 2px solid var(--border);
+  box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+}
+.shift-table th.work-col {
+  position: sticky; top: 0; left: 60px; z-index: 20; background: var(--surface2);
+  border-right: 2px solid var(--border);
+}
+.shift-table th.sun-h { color: var(--danger); }
+.shift-table th.sat-h { color: var(--accent3); }
+.shift-table td {
+  padding: 4px 3px; text-align: center; border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); min-width: 64px; height: 34px; vertical-align: middle;
+}
+.shift-table td.sun-col { background: rgba(220,38,38,0.03); }
+.shift-table td.sat-col { background: rgba(37,99,235,0.03); }
+.shift-table td.staff-col {
+  background: var(--surface2) !important; font-weight: 700; font-size: 12px;
+  text-align: left; padding-left: 10px; position: sticky; left: 0; z-index: 5;
+  border-right: 2px solid var(--border); min-width: 60px; box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+}
+.shift-table td.work-col {
+  background: var(--surface2) !important; font-family: 'Space Mono', monospace;
+  font-weight: 700; font-size: 12px; color: var(--accent);
+  position: sticky; left: 60px; z-index: 5; border-right: 2px solid var(--border); min-width: 36px;
+}
+.shift-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; height: 26px; border-radius: 4px; font-size: 10px; font-weight: 700;
+  cursor: pointer; transition: all 0.12s; white-space: nowrap; padding: 0 4px;
+}
+.shift-cell.rest { color: #c0c8d8; background: transparent; cursor: default; }
+.shift-cell.hl-match { outline: 2px solid var(--accent) !important; outline-offset: 2px; box-shadow: 0 0 8px rgba(232,82,10,0.5); transform: scale(1.12); z-index: 30; }
+.shift-cell.hl-dim { opacity: 0.15; }
+
+.empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
+.empty-text { font-size: 13px; line-height: 1.8; }
+
+.loading-state {
+  padding: 60px 20px; text-align: center; color: var(--text-muted);
+  font-size: 13px; font-family: 'Space Mono', monospace;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.spinner {
+  width: 20px; height: 20px; border: 2px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.highlight-hint {
+  font-size: 11px; color: var(--text-muted); padding: 6px 14px;
+  background: rgba(232,82,10,0.03); border-bottom: 1px solid var(--border);
+}
+
+@media print {
+  header, .highlight-hint, .month-select-wrap { display: none !important; }
+  .shift-table th, .shift-table td { font-size: 9px; padding: 3px 2px; min-width: 48px; }
+  body { background: white; }
+  .panel { box-shadow: none; border: none; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <span class="logo">SHIFT VIEW</span>
+    <h1>シフト<span>閲覧</span></h1>
+    <div class="month-select-wrap">
+      <label for="monthSelect">表示月</label>
+      <select id="monthSelect" onchange="onMonthChange()">
+        <option value="">読み込み中...</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="section-bar">
+      <div class="dot"></div>
+      <span class="section-title" id="tableTitle">📋 シフト表</span>
+      <button onclick="window.print()" style="margin-left:auto;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)">🖨 印刷</button>
+    </div>
+    <div id="content">
+      <div class="loading-state"><div class="spinner"></div>読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DOW = ['日','月','火','水','木','金','土'];
+
+const STORE_COLORS = [
+  { bg:'rgba(232,82,10,0.12)',  text:'#c94408' },
+  { bg:'rgba(37,99,235,0.10)', text:'#1d4ed8' },
+  { bg:'rgba(22,163,74,0.10)', text:'#15803d' },
+  { bg:'rgba(124,58,237,0.10)',text:'#6d28d9' },
+  { bg:'rgba(217,119,6,0.12)', text:'#b45309' },
+  { bg:'rgba(6,182,212,0.10)', text:'#0e7490' },
+  { bg:'rgba(219,39,119,0.10)',text:'#be185d' },
+  { bg:'rgba(15,118,110,0.10)',text:'#0f766e' },
+  { bg:'rgba(79,70,229,0.10)', text:'#4338ca' },
+  { bg:'rgba(185,28,28,0.10)', text:'#991b1b' },
+  { bg:'rgba(5,150,105,0.10)', text:'#047857' },
+  { bg:'rgba(202,138,4,0.10)', text:'#854d0e' },
+  { bg:'rgba(2,132,199,0.10)', text:'#0369a1' },
+  { bg:'rgba(147,51,234,0.10)',text:'#7e22ce' },
+  { bg:'rgba(225,29,72,0.10)', text:'#be123c' },
+];
+
+let currentStoreList = [];
+let _hl = null;
+
+function getDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+function getDow(y, m, d) { return new Date(y, m-1, d).getDay(); }
+
+function getStoreColor(storeName) {
+  const idx = currentStoreList.indexOf(storeName);
+  return STORE_COLORS[idx >= 0 ? idx % STORE_COLORS.length : 0];
+}
+
+async function init() {
+  if (!window._fbReady) {
+    await new Promise(r => window.addEventListener('firebase-ready', r, { once: true }));
+  }
+  await loadMonthsList();
+}
+
+async function loadMonthsList() {
+  const sel = document.getElementById('monthSelect');
+  try {
+    const q = window._fbQuery(
+      window._fbCollection(window._fbDb, 'shifts'),
+      window._fbOrderBy('yearMonth', 'desc')
+    );
+    const snap = await window._fbGetDocs(q);
+
+    sel.innerHTML = '';
+    if (snap.empty) {
+      sel.innerHTML = '<option value="">公開済みシフトなし</option>';
+      showNoData();
+      return;
+    }
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const opt = document.createElement('option');
+      opt.value = docSnap.id;
+      opt.textContent = `${d.year}年${d.month}月`;
+      sel.appendChild(opt);
+    });
+
+    sel.selectedIndex = 0;
+    await loadShift(sel.value);
+  } catch(err) {
+    sel.innerHTML = '<option value="">読み込みエラー</option>';
+    showError(err.message);
+  }
+}
+
+async function onMonthChange() {
+  const docId = document.getElementById('monthSelect').value;
+  if (!docId) return;
+  await loadShift(docId);
+}
+
+async function loadShift(docId) {
+  _hl = null;
+  document.getElementById('content').innerHTML =
+    '<div class="loading-state"><div class="spinner"></div>読み込み中...</div>';
+  try {
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    if (!snap.exists()) { showNoData(); return; }
+    const data = snap.data();
+    currentStoreList = data.storeList || [];
+    renderShiftTable(data);
+  } catch(err) {
+    showError(err.message);
+  }
+}
+
+function renderShiftTable(data) {
+  const { year: y, month: m, shiftData, staffList, publishedAt } = data;
+  const days = getDaysInMonth(y, m);
+  const pubDate = publishedAt
+    ? new Date(publishedAt).toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    : '';
+
+  document.getElementById('tableTitle').textContent = `📋 ${y}年${m}月 シフト表`;
+
+  let html = '';
+  if (pubDate) html += `<div class="pub-info">公開日時: ${pubDate}</div>`;
+  html += '<div class="highlight-hint">💡 店舗名をクリックすると該当箇所がハイライトされます</div>';
+  html += '<div class="shift-outer"><table class="shift-table"><thead><tr>';
+  html += '<th class="staff-col" style="min-width:60px">スタッフ</th>';
+  html += '<th class="work-col" style="min-width:36px">稼働</th>';
+
+  for (let d = 1; d <= days; d++) {
+    const dow = getDow(y, m, d);
+    const cls = dow===0 ? ' class="sun-h"' : (dow===6 ? ' class="sat-h"' : '');
+    html += `<th${cls} style="min-width:64px">${d}<br><span style="font-size:9px;font-weight:400">${DOW[dow]}</span></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  const names = staffList || Object.keys(shiftData);
+  names.forEach(name => {
+    const ss = shiftData[name] || {};
+    let work = 0;
+    for (let d = 1; d <= days; d++) { if (ss[String(d)] && ss[String(d)] !== '休') work++; }
+
+    html += '<tr>';
+    html += `<td class="staff-col">${name}</td>`;
+    html += `<td class="work-col">${work}</td>`;
+    for (let d = 1; d <= days; d++) {
+      const val = ss[String(d)] || '休';
+      const dow = getDow(y, m, d);
+      const dayClass = dow===0 ? ' sun-col' : (dow===6 ? ' sat-col' : '');
+      html += `<td class="${dayClass}" onclick="highlightStore('${val.replace(/'/g,"\\'")}')">`;
+      html += renderCell(val);
+      html += '</td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderCell(val) {
+  if (!val || val === '休') return '<span class="shift-cell rest">休</span>';
+  const c = getStoreColor(val);
+  return `<span class="shift-cell" style="background:${c.bg};color:${c.text}">${val}</span>`;
+}
+
+function highlightStore(storeName) {
+  if (!storeName || storeName === '休') return;
+  if (_hl === storeName) { clearHighlight(); return; }
+  _hl = storeName;
+  document.querySelectorAll('.shift-cell').forEach(el => {
+    const isMatch = el.textContent.trim() === storeName;
+    el.classList.toggle('hl-match', isMatch);
+    el.classList.toggle('hl-dim', !isMatch && !el.classList.contains('rest'));
+  });
+}
+
+function clearHighlight() {
+  _hl = null;
+  document.querySelectorAll('.shift-cell').forEach(el => el.classList.remove('hl-match', 'hl-dim'));
+}
+
+function showNoData() {
+  document.getElementById('content').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">公開されたシフトがまだありません<br>管理者がシフトを確定・公開すると表示されます</div>
+    </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('content').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">⚠️</div>
+      <div class="empty-text">読み込みエラーが発生しました<br><span style="font-size:11px;color:var(--danger)">${msg}</span><br><br>
+      Firestoreのデータベース・セキュリティルールを確認してください。</div>
+    </div>`;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.shift-table')) clearHighlight();
+});
+
+init();
+</script>
+</body>
+</html>

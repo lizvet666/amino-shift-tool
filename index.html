@@ -4,6 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>シフト自動作成ツール v3</title>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAm30tcmi5Sqm2X8FKoMLqlhjWySiEnRM",
+    authDomain: "amino-shift.firebaseapp.com",
+    projectId: "amino-shift",
+    storageBucket: "amino-shift.firebasestorage.app",
+    messagingSenderId: "1086205668210",
+    appId: "1:1086205668210:web:c7f6ea4d575bed35b73d8b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // グローバルに公開
+  window._fbDb = db;
+  window._fbSetDoc = setDoc;
+  window._fbGetDoc = getDoc;
+  window._fbDoc = doc;
+  window._fbCollection = collection;
+  window._fbGetDocs = getDocs;
+  window._fbQuery = query;
+  window._fbOrderBy = orderBy;
+  window._fbReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
 
@@ -258,6 +287,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
             <button class="btn-sm" onclick="generateShift()">🔄 再生成</button>
             <button class="btn-sm" onclick="undoLastChange()" id="btnUndo" style="display:none">↩ 元に戻す</button>
             <span class="change-count" id="changeCount"></span>
+            <button class="btn-sm" onclick="publishShift()" id="btnPublish" style="background:var(--success);color:#fff;border:none">✅ 確定・公開</button>
           </div>
         </div>
         <div id="shiftArea">
@@ -1131,6 +1161,48 @@ function exportCSV() {
   const a = document.createElement('a');
   a.href=url; a.download=`shift_${y}${String(m).padStart(2,'0')}.csv`; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ==================== FIREBASE PUBLISH ====================
+async function publishShift() {
+  if (!Object.keys(shiftData).length) {
+    alert('シフトが生成されていません。先にAIでシフトを生成してください。');
+    return;
+  }
+  if (!confirm('このシフトを確定・公開しますか？\nスタッフが閲覧用ページで確認できるようになります。')) return;
+
+  if (!window._fbReady) {
+    alert('Firebase初期化中です。数秒後に再試行してください。');
+    return;
+  }
+
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  overlay.classList.add('show');
+  loadingText.textContent = 'Firebaseに保存中...';
+
+  try {
+    const docId = `${y}_${String(m).padStart(2,'0')}`;
+    await window._fbSetDoc(
+      window._fbDoc(window._fbDb, 'shifts', docId),
+      {
+        year: y,
+        month: m,
+        yearMonth: y * 100 + m,
+        shiftData,
+        staffList: STAFF.map(s => s.name),
+        storeList: STORES.map(s => s.name),
+        publishedAt: new Date().toISOString(),
+      }
+    );
+    overlay.classList.remove('show');
+    alert(`✅ ${y}年${m}月のシフトを公開しました！\nスタッフが /view から確認できます。`);
+  } catch(err) {
+    overlay.classList.remove('show');
+    alert('公開エラー: ' + err.message + '\nFirestoreのルールを確認してください。');
+  }
 }
 
 // ==================== ADMIN MODAL ====================
