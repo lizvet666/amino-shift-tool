@@ -143,6 +143,12 @@ select#monthSelect:focus { border-color: var(--accent); }
   background: rgba(232,82,10,0.03); border-bottom: 1px solid var(--border);
 }
 
+tr.row-hl td { background: rgba(232,82,10,0.07) !important; }
+tr.row-hl td.staff-col { background: rgba(232,82,10,0.15) !important; font-weight: 800; color: var(--accent); }
+tr.row-dim { opacity: 0.18; }
+.shift-table td.staff-col { cursor: pointer; }
+.shift-table td.staff-col:hover { color: var(--accent); }
+
 @media (max-width: 640px) {
   .container { padding: 10px 12px; }
   header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
@@ -290,7 +296,7 @@ function renderShiftTable(data) {
 
   let html = '';
   if (pubDate) html += `<div class="pub-info">公開日時: ${pubDate}</div>`;
-  html += '<div class="highlight-hint">💡 店舗名をクリックすると該当箇所がハイライトされます</div>';
+  html += '<div class="highlight-hint">💡 <b>スタッフ名</b>をクリックでその行、<b>店舗名</b>をクリックで該当箇所をハイライト</div>';
   html += '<div class="shift-outer"><table class="shift-table"><thead><tr>';
   html += '<th class="staff-col" style="min-width:60px">スタッフ</th>';
   html += '<th class="work-col" style="min-width:36px">稼働</th>';
@@ -308,8 +314,8 @@ function renderShiftTable(data) {
     let work = 0;
     for (let d = 1; d <= days; d++) { if (ss[String(d)] && ss[String(d)] !== '休') work++; }
 
-    html += '<tr>';
-    html += `<td class="staff-col">${name}</td>`;
+    html += `<tr data-staff="${name}">`;
+    html += `<td class="staff-col" onclick="highlightStaff('${name.replace(/'/g,"\\'")}')">${name}</td>`;
     html += `<td class="work-col">${work}</td>`;
     for (let d = 1; d <= days; d++) {
       const val = ss[String(d)] || '休';
@@ -348,6 +354,24 @@ function clearHighlight() {
   document.querySelectorAll('.shift-cell').forEach(el => el.classList.remove('hl-match', 'hl-dim'));
 }
 
+let _hlStaff = null;
+
+function highlightStaff(name) {
+  clearHighlight();
+  if (_hlStaff === name) { clearStaffHighlight(); return; }
+  _hlStaff = name;
+  document.querySelectorAll('tbody tr').forEach(tr => {
+    const isMatch = tr.dataset.staff === name;
+    tr.classList.toggle('row-hl', isMatch);
+    tr.classList.toggle('row-dim', !isMatch);
+  });
+}
+
+function clearStaffHighlight() {
+  _hlStaff = null;
+  document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('row-hl', 'row-dim'));
+}
+
 function showNoData() {
   document.getElementById('content').innerHTML = `
     <div class="empty-state">
@@ -366,7 +390,7 @@ function showError(msg) {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.shift-table')) clearHighlight();
+  if (!e.target.closest('.shift-table')) { clearHighlight(); clearStaffHighlight(); }
 });
 
 init();
