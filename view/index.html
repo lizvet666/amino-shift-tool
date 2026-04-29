@@ -143,9 +143,13 @@ select#monthSelect:focus { border-color: var(--accent); }
   background: rgba(232,82,10,0.03); border-bottom: 1px solid var(--border);
 }
 
-tr.row-hl td { background: rgba(232,82,10,0.07) !important; }
-tr.row-hl td.staff-col { background: rgba(232,82,10,0.15) !important; font-weight: 800; color: var(--accent); }
-tr.row-dim { opacity: 0.18; }
+tr.row-hl td { background: #fef0ea !important; }
+tr.row-hl td.staff-col { background: #fdddd0 !important; color: var(--accent) !important; font-weight: 800; }
+tr.row-hl td.work-col { background: #fdddd0 !important; }
+tr.row-dim td { color: #d8dce6 !important; background: #fafbfd !important; }
+tr.row-dim td.staff-col { color: #d8dce6 !important; background: var(--surface2) !important; box-shadow: 2px 0 4px rgba(0,0,0,0.04); }
+tr.row-dim td.work-col { color: #d8dce6 !important; background: var(--surface2) !important; }
+tr.row-dim .shift-cell { color: #d8dce6 !important; background: transparent !important; }
 .shift-table td.staff-col { cursor: pointer; }
 .shift-table td.staff-col:hover { color: var(--accent); }
 
