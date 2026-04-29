@@ -344,6 +344,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
             </div>
 
             <button class="btn-gen" id="btnGen" onclick="generateShift()">✦ AIでシフトを自動生成</button>
+            <button class="btn-sm" id="btnLoadPublished" onclick="loadPublishedShift()" style="width:100%;margin-top:6px;justify-content:center;padding:9px">📂 公開済みシフトを読み込んで編集</button>
           </div>
 
           <!-- Right: shift table + stores + violations -->
@@ -1620,6 +1621,46 @@ function changeAdminPassword() {
   document.getElementById('newAdminPw').value = '';
   document.getElementById('newAdminPwConfirm').value = '';
   alert('パスワードを変更しました');
+}
+
+// ==================== LOAD PUBLISHED SHIFT FOR EDITING ====================
+async function loadPublishedShift() {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  const docId = `${y}_${String(m).padStart(2,'0')}`;
+
+  if (!window._fbReady) { alert('Firebase初期化中です。少し待ってから再試行してください。'); return; }
+  if (!confirm(`${y}年${m}月の公開済みシフトを読み込みますか？\n現在の編集内容は失われます。`)) return;
+
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  overlay.classList.add('show');
+  loadingText.textContent = '公開済みシフトを読み込み中...';
+
+  try {
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    overlay.classList.remove('show');
+    if (!snap.exists()) { alert(`${y}年${m}月の公開済みシフトがありません。`); return; }
+    const data = snap.data();
+    shiftData = data.shiftData || {};
+    originalShift = JSON.parse(JSON.stringify(shiftData));
+    changeHistory = [];
+    modifiedCells = new Set();
+    clearStoreHighlight();
+    const days = getDaysInMonth(y, m);
+    renderShiftTable(y, m, days);
+    renderStores(y, m, days);
+    checkViolations(y, m, days, [], '');
+    document.getElementById('exportRow').style.display = 'flex';
+    document.getElementById('btnUndo').style.display = 'none';
+    document.getElementById('changeCount').textContent = '';
+    document.getElementById('storePanel').style.display = 'block';
+    document.getElementById('violPanel').style.display = 'block';
+    alert(`✅ ${y}年${m}月のシフトを読み込みました。編集後「確定・公開」で上書き保存できます。`);
+  } catch(err) {
+    overlay.classList.remove('show');
+    alert('読み込みエラー: ' + err.message);
+  }
 }
 
 // ==================== FIRESTORE SETTINGS SYNC ====================
