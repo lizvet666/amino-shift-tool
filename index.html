@@ -670,8 +670,10 @@ const DEFAULT_STAFF_RULES = `【スタッフ個別ルール】
 - 西方：鶴ヶ峰メイン担当。`;
 
 // ==================== LOAD STATE ====================
-let STAFF  = JSON.parse(localStorage.getItem('shift_staff_v5'))  || DEFAULT_STAFF;
-let STORES = JSON.parse(localStorage.getItem('shift_stores_v6')) || DEFAULT_STORES;
+const _rawStaff  = JSON.parse(localStorage.getItem('shift_staff_v5'));
+const _rawStores = JSON.parse(localStorage.getItem('shift_stores_v6'));
+let STAFF  = (_rawStaff  && _rawStaff.length  > 0) ? _rawStaff  : DEFAULT_STAFF;
+let STORES = (_rawStores && _rawStores.length > 0) ? _rawStores : DEFAULT_STORES;
 let storeRulesText = localStorage.getItem('shift_store_rules_v5') || DEFAULT_STORE_RULES;
 let staffRulesText = localStorage.getItem('shift_staff_rules_v5') || DEFAULT_STAFF_RULES;
 
