@@ -1465,6 +1465,7 @@ function saveAdmin() {
   localStorage.setItem('shift_stores_v6', JSON.stringify(STORES));
   localStorage.setItem('shift_store_rules_v5', storeRulesText);
   localStorage.setItem('shift_staff_rules_v5', staffRulesText);
+  saveSettingsToFirestore();
 
   const newMap = {};
   const newConsec = {};
@@ -1620,6 +1621,44 @@ function changeAdminPassword() {
   alert('パスワードを変更しました');
 }
 
+// ==================== FIRESTORE SETTINGS SYNC ====================
+async function saveSettingsToFirestore() {
+  if (!window._fbReady) return;
+  try {
+    await window._fbSetDoc(window._fbDoc(window._fbDb, 'settings', 'config'), {
+      staff: STAFF, stores: STORES,
+      storeRules: storeRulesText, staffRules: staffRulesText,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn('設定保存失敗:', e.message); }
+}
+
+async function loadSettingsFromFirestore() {
+  if (!window._fbReady) {
+    await new Promise(r => window.addEventListener('firebase-ready', r, { once: true }));
+  }
+  try {
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'settings', 'config'));
+    if (!snap.exists()) return;
+    const d = snap.data();
+    let changed = false;
+    if (d.staff)      { STAFF = d.staff; localStorage.setItem('shift_staff_v5', JSON.stringify(STAFF)); changed = true; }
+    if (d.stores)     {
+      STORES = d.stores.map((s,i) => ({
+        id: s.id || 'store_'+i, name: s.name, required: s.required || 10,
+        maxPerDay: s.maxPerDay ?? 1, allowedStaff: s.allowedStaff || [],
+        maxDay: s.maxDay ?? 0, minDay: s.minDay ?? 0,
+        weekdayOnly: s.weekdayOnly ?? false, forbidDow: s.forbidDow || []
+      }));
+      localStorage.setItem('shift_stores_v6', JSON.stringify(STORES));
+      changed = true;
+    }
+    if (d.storeRules) { storeRulesText = d.storeRules; localStorage.setItem('shift_store_rules_v5', storeRulesText); changed = true; }
+    if (d.staffRules) { staffRulesText = d.staffRules; localStorage.setItem('shift_staff_rules_v5', staffRulesText); changed = true; }
+    if (changed) renderCalendars();
+  } catch(e) { console.warn('設定読み込み失敗:', e.message); }
+}
+
 // ==================== INIT ====================
 document.addEventListener('click', e => {
   if (!e.target.closest('#storePopup')) document.getElementById('storePopup').style.display = 'none';
@@ -1629,6 +1668,7 @@ document.getElementById('month').addEventListener('change', renderCalendars);
 initAdminMode();
 renderCalendars();
 renderPrevConsecList();
+loadSettingsFromFirestore();
 </script>
 </body>
 </html>
