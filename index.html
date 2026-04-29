@@ -98,6 +98,26 @@ body:not(.admin-mode) .shift-layout { grid-template-columns: 1fr; }
 .btn-login.unlocked { border-color: var(--success); color: var(--success); background: rgba(22,163,74,0.06); }
 .btn-login.unlocked:hover { border-color: var(--danger); color: var(--danger); background: rgba(220,38,38,0.06); }
 
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+  body { height: auto; overflow: auto; }
+  .app-layout { flex-direction: column; height: auto; min-height: 100svh; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0; }
+  .sidebar-logo { padding: 10px 14px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+  .logo-text { display: none; }
+  .sidebar-nav { padding: 6px 8px; display: flex; flex-direction: row; overflow-x: auto; flex: 1; gap: 2px; scrollbar-width: none; }
+  .sidebar-nav::-webkit-scrollbar { display: none; }
+  .nav-item { margin-bottom: 0; font-size: 11px; padding: 7px 10px; white-space: nowrap; flex-shrink: 0; }
+  .main-area { overflow: visible; min-height: 0; }
+  .content { overflow: visible; padding: 12px 10px; }
+  .top-header { padding: 0 12px; height: 46px; }
+  .page-title { font-size: 13px; }
+  .badge { display: none; }
+  .btn-login { font-size: 11px; padding: 5px 10px; }
+  .shift-layout { grid-template-columns: 1fr; }
+  .shift-left { display: none !important; }
+}
+
 /* ===== SECTION / PANEL ===== */
 .section-bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border); font-size:12px; font-weight:700; letter-spacing:0.04em; color:var(--text-muted); }
 .section-bar .section-title { color:var(--text); font-size:13px; }

@@ -143,6 +143,17 @@ select#monthSelect:focus { border-color: var(--accent); }
   background: rgba(232,82,10,0.03); border-bottom: 1px solid var(--border);
 }
 
+@media (max-width: 640px) {
+  .container { padding: 10px 12px; }
+  header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  h1 { font-size: 17px; }
+  .month-select-wrap { margin-left: 0; width: 100%; }
+  select#monthSelect { width: 100%; font-size: 14px; padding: 9px 12px; }
+  .shift-table td { min-width: 52px; font-size: 10px; }
+  .shift-table th { min-width: 52px; }
+  .shift-cell { font-size: 9px; height: 24px; }
+}
+
 @media print {
   header, .highlight-hint, .month-select-wrap { display: none !important; }
   .shift-table th, .shift-table td { font-size: 9px; padding: 3px 2px; min-width: 48px; }
