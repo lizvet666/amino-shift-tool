@@ -189,7 +189,10 @@ tr.row-dim .shift-cell { color: #d8dce6 !important; background: transparent !imp
     <div class="section-bar">
       <div class="dot"></div>
       <span class="section-title" id="tableTitle">📋 シフト表</span>
-      <button onclick="window.print()" style="margin-left:auto;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)">🖨 印刷</button>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+        <button id="btnFit" onclick="toggleFitMode()" style="display:none;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid var(--accent);background:rgba(232,82,10,0.07);color:var(--accent)">🔍 全体表示</button>
+        <button onclick="window.print()" style="padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)">🖨 印刷</button>
+      </div>
     </div>
     <div id="content">
       <div class="loading-state"><div class="spinner"></div>読み込み中...</div>
@@ -334,6 +337,8 @@ function renderShiftTable(data) {
 
   html += '</tbody></table></div>';
   document.getElementById('content').innerHTML = html;
+  fitMode = false;
+  initFitBtn();
 }
 
 function renderCell(val) {
@@ -396,6 +401,41 @@ function showError(msg) {
 document.addEventListener('click', e => {
   if (!e.target.closest('.shift-table')) { clearHighlight(); clearStaffHighlight(); }
 });
+
+let fitMode = false;
+
+function toggleFitMode() {
+  fitMode = !fitMode;
+  const outer = document.querySelector('.shift-outer');
+  const table = document.querySelector('.shift-table');
+  const btn = document.getElementById('btnFit');
+  if (!outer || !table) return;
+  if (fitMode) {
+    const scale = outer.clientWidth / table.offsetWidth;
+    table.style.transform = `scale(${scale})`;
+    table.style.transformOrigin = 'top left';
+    outer.style.height = (table.offsetHeight * scale) + 'px';
+    outer.style.overflowX = 'hidden';
+    btn.textContent = '↔ スクロール表示';
+    btn.style.background = 'rgba(100,116,139,0.1)';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color = 'var(--text-muted)';
+  } else {
+    table.style.transform = '';
+    outer.style.height = '';
+    outer.style.overflowX = 'auto';
+    btn.textContent = '🔍 全体表示';
+    btn.style.background = 'rgba(232,82,10,0.07)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = 'var(--accent)';
+  }
+}
+
+function initFitBtn() {
+  if (window.innerWidth <= 640) {
+    document.getElementById('btnFit').style.display = 'block';
+  }
+}
 
 init();
 </script>
