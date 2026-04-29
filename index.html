@@ -543,6 +543,23 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
           </div>
 
           <div class="panel">
+            <div class="panel-header"><div class="dot" style="background:#06b6d4"></div><span class="panel-title">LINE通知（GAS Webhook URL）</span></div>
+            <div class="panel-body">
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">
+                GASのウェブアプリURLを入力すると、シフト確定・公開時にLINEグループへ自動通知されます。
+              </p>
+              <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+                <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0">
+                  <label>GAS Webhook URL</label>
+                  <input type="text" id="gasWebhookUrl" placeholder="https://script.google.com/macros/s/..." autocomplete="off" style="font-size:11px">
+                </div>
+                <button class="btn-sm success" onclick="saveGasUrl()" style="padding:8px 16px;font-size:12px">💾 保存</button>
+              </div>
+              <div id="gasUrlStatus" style="font-size:12px;color:var(--text-muted);margin-top:10px"></div>
+            </div>
+          </div>
+
+          <div class="panel">
             <div class="panel-header"><div class="dot" style="background:#7c3aed"></div><span class="panel-title">管理者パスワード変更</span></div>
             <div class="panel-body">
               <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.7">初期値は <code style="font-family:'Space Mono',monospace;background:var(--surface2);padding:1px 6px;border-radius:3px;border:1px solid var(--border)">admin</code> です。</p>
@@ -1299,20 +1316,35 @@ async function publishShift() {
 
   try {
     const docId = `${y}_${String(m).padStart(2,'0')}`;
+
+    // 新規か修正かを判別
+    const existing = await window._fbGetDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    const isRevision = existing.exists();
+
     await window._fbSetDoc(
       window._fbDoc(window._fbDb, 'shifts', docId),
       {
-        year: y,
-        month: m,
-        yearMonth: y * 100 + m,
-        shiftData,
-        staffList: STAFF.map(s => s.name),
+        year: y, month: m, yearMonth: y * 100 + m,
+        shiftData, staffList: STAFF.map(s => s.name),
         storeList: STORES.map(s => s.name),
         publishedAt: new Date().toISOString(),
       }
     );
     overlay.classList.remove('show');
     alert(`✅ ${y}年${m}月のシフトを公開しました！\nスタッフが /view から確認できます。`);
+
+    // LINE通知
+    const gasUrl = localStorage.getItem('gas_webhook_url') || '';
+    if (gasUrl) {
+      const label = isRevision ? '【シフト修正のお知らせ】' : '【シフト公開のお知らせ】';
+      const msg = `${label}\n${y}年${m}月のシフトが${isRevision ? '修正・再' : ''}公開されました。\n以下のURLからご確認ください。\nhttps://glittery-toffee-26a5ae.netlify.app/view/`;
+      fetch(gasUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      }).catch(() => {});
+    }
   } catch(err) {
     overlay.classList.remove('show');
     alert('公開エラー: ' + err.message + '\nFirestoreのルールを確認してください。');
@@ -1340,6 +1372,7 @@ function switchView(name) {
     document.getElementById('aiEngine').value = localStorage.getItem('ai_engine') || 'gemini';
     showApiKeyStatus();
     showOpenAiApiKeyStatus();
+    showGasUrlStatus();
   }
 }
 
@@ -1535,6 +1568,33 @@ function clearOpenAiApiKey() {
   if (!confirm('OpenAI APIキーを削除しますか？')) return;
   localStorage.removeItem('openai_api_key');
   showOpenAiApiKeyStatus();
+}
+
+function saveGasUrl() {
+  const url = document.getElementById('gasWebhookUrl').value.trim();
+  if (!url) { alert('URLを入力してください'); return; }
+  localStorage.setItem('gas_webhook_url', url);
+  document.getElementById('gasWebhookUrl').value = '';
+  showGasUrlStatus();
+  alert('GAS URLを保存しました。');
+}
+
+function showGasUrlStatus() {
+  const url = localStorage.getItem('gas_webhook_url') || '';
+  const el = document.getElementById('gasUrlStatus');
+  if (!el) return;
+  if (url) {
+    const short = url.length > 60 ? url.slice(0, 60) + '...' : url;
+    el.innerHTML = `<span style="color:var(--success)">✓ 設定済み：${short}</span> <button class="btn-sm danger" onclick="clearGasUrl()" style="padding:2px 7px;font-size:10px;margin-left:6px">削除</button>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--warning)">⚠ 未設定（設定するとLINE通知が有効になります）</span>`;
+  }
+}
+
+function clearGasUrl() {
+  if (!confirm('GAS URLを削除しますか？')) return;
+  localStorage.removeItem('gas_webhook_url');
+  showGasUrlStatus();
 }
 
 function saveAiEngine() {
