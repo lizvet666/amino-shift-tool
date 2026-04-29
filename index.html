@@ -625,7 +625,8 @@ const DEFAULT_STAFF = [
   { id:'ogitani',  name:'荻谷',   fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
   { id:'kuroda',   name:'黒田',   fixedRestDow:[4], onlyDow:-1, maxConsecutive:6 },
   { id:'takasaka', name:'高坂',   fixedRestDow:[],  onlyDow:-1, maxConsecutive:5 },
-  { id:'youhin',   name:'用品',   fixedRestDow:[1,2,3,4,5,6], onlyDow:-1, maxConsecutive:5 },
+  { id:'youhin',    name:'用品',   fixedRestDow:[1,2,3,4,5,6], onlyDow:-1, maxConsecutive:5 },
+  { id:'nishikata', name:'西方',   fixedRestDow:[],             onlyDow:-1, maxConsecutive:5 },
 ];
 
 const DEFAULT_STORES = [
@@ -665,7 +666,8 @@ const DEFAULT_STAFF_RULES = `【スタッフ個別ルール】
 - 荻谷：週1日休み。1〜10日はらら横・OPAを優先。月に2回連休（2日以上連続の休み）がほしい。
 - 黒田：月2回休み（木曜以外で）。木曜は毎週休み（相武台も木曜休み）。平日（木以外）は必ず相武台。土曜・日曜は二俣川に入る（固定ではないが優先）。
 - 高坂：月21〜23日あたりに連休希望。らら平メイン。1〜10日の平日は外兼松も担当。蒲田も担当（連勤にならないように）。1〜10日の土日はらら平可。
-- 用品：日曜日のみ出勤。大宮→らら平の優先順位で配置。`;
+- 用品：日曜日のみ出勤。大宮→らら平の優先順位で配置。
+- 西方：鶴ヶ峰メイン担当。`;
 
 // ==================== LOAD STATE ====================
 let STAFF  = JSON.parse(localStorage.getItem('shift_staff_v5'))  || DEFAULT_STAFF;
@@ -1456,13 +1458,10 @@ function saveAdmin() {
     if (numInputs[1] && adminEditing.stores[idx]) adminEditing.stores[idx].maxPerDay = +numInputs[1].value;
   });
 
-  STAFF  = adminEditing.staff;
-  STORES = adminEditing.stores;
+  if (adminEditing.staff.length > 0)  { STAFF  = adminEditing.staff;  localStorage.setItem('shift_staff_v5',  JSON.stringify(STAFF)); }
+  if (adminEditing.stores.length > 0) { STORES = adminEditing.stores; localStorage.setItem('shift_stores_v6', JSON.stringify(STORES)); }
   storeRulesText = document.getElementById('adminStoreRules').value;
   staffRulesText = document.getElementById('adminStaffRules').value;
-
-  localStorage.setItem('shift_staff_v5',  JSON.stringify(STAFF));
-  localStorage.setItem('shift_stores_v6', JSON.stringify(STORES));
   localStorage.setItem('shift_store_rules_v5', storeRulesText);
   localStorage.setItem('shift_staff_rules_v5', staffRulesText);
   saveSettingsToFirestore();
@@ -1642,8 +1641,8 @@ async function loadSettingsFromFirestore() {
     if (!snap.exists()) return;
     const d = snap.data();
     let changed = false;
-    if (d.staff)      { STAFF = d.staff; localStorage.setItem('shift_staff_v5', JSON.stringify(STAFF)); changed = true; }
-    if (d.stores)     {
+    if (d.staff && d.staff.length > 0)      { STAFF = d.staff; localStorage.setItem('shift_staff_v5', JSON.stringify(STAFF)); changed = true; }
+    if (d.stores && d.stores.length > 0)     {
       STORES = d.stores.map((s,i) => ({
         id: s.id || 'store_'+i, name: s.name, required: s.required || 10,
         maxPerDay: s.maxPerDay ?? 1, allowedStaff: s.allowedStaff || [],
