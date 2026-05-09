@@ -360,6 +360,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
                   <button class="btn-sm" onclick="undoLastChange()" id="btnUndo" style="display:none">↩ 元に戻す</button>
                   <span class="change-count" id="changeCount"></span>
                   <button class="btn-sm" onclick="publishShift()" id="btnPublish" style="background:var(--success);color:#fff;border:none">✅ 確定・公開</button>
+                  <button class="btn-sm" id="btnLineNotify" onclick="sendLineNotification()" style="display:none;background:#06C755;color:#fff;border:none">📨 LINEに通知する</button>
                 </div>
               </div>
               <div id="shiftArea">
@@ -1333,22 +1334,35 @@ async function publishShift() {
     overlay.classList.remove('show');
     alert(`✅ ${y}年${m}月のシフトを公開しました！\nスタッフが /view から確認できます。`);
 
-    // LINE通知
+    // LINEボタンを表示（GAS URLが設定されている場合）
     const gasUrl = localStorage.getItem('gas_webhook_url') || '';
     if (gasUrl) {
       const label = isRevision ? '【シフト修正のお知らせ】' : '【シフト公開のお知らせ】';
       const msg = `${label}\n${y}年${m}月のシフトが${isRevision ? '修正・再' : ''}公開されました。\n以下のURLからご確認ください。\nhttps://glittery-toffee-26a5ae.netlify.app/view/`;
-      fetch(gasUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg })
-      }).catch(() => {});
+      window._lineNotifyPayload = { gasUrl, msg };
+      const btn = document.getElementById('btnLineNotify');
+      if (btn) { btn.style.display = ''; btn.textContent = '📨 LINEに通知する'; }
     }
   } catch(err) {
     overlay.classList.remove('show');
     alert('公開エラー: ' + err.message + '\nFirestoreのルールを確認してください。');
   }
+}
+
+function sendLineNotification() {
+  const payload = window._lineNotifyPayload;
+  if (!payload) return;
+  const btn = document.getElementById('btnLineNotify');
+  if (btn) { btn.textContent = '送信中…'; btn.disabled = true; }
+  fetch(payload.gasUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: payload.msg })
+  }).catch(() => {}).finally(() => {
+    if (btn) { btn.textContent = '✅ 送信済み'; btn.disabled = true; }
+    window._lineNotifyPayload = null;
+  });
 }
 
 // ==================== VIEW NAVIGATION ====================
