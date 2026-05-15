@@ -262,6 +262,20 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
 .pw-modal-title { font-size:16px; font-weight:700; margin-bottom:6px; color:var(--text); }
 .pw-modal-sub { font-size:12px; color:var(--text-muted); margin-bottom:20px; line-height:1.6; }
 .pw-error { font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
+/* ===== HELP TIPS ===== */
+.help-tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--text-muted);color:#fff;font-size:9px;font-weight:700;cursor:pointer;position:relative;margin-left:5px;flex-shrink:0;vertical-align:middle}
+.help-tip-text{display:none;position:absolute;left:20px;top:-4px;background:#1e2533;color:#fff;font-size:11px;font-weight:400;padding:7px 11px;border-radius:7px;width:230px;line-height:1.6;z-index:200;white-space:normal;box-shadow:0 4px 14px rgba(0,0,0,0.35)}
+.help-tip:hover .help-tip-text{display:block}
+/* ===== SETUP BANNER ===== */
+.setup-step{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.7);border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--text)}
+.setup-step:hover{border-color:var(--accent);background:#fff}
+.setup-step.done{border-color:rgba(22,163,74,0.4);background:rgba(22,163,74,0.06);color:#15803d}
+.setup-step .step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:var(--border);color:var(--text-muted);flex-shrink:0}
+.setup-step.done .step-num{background:#16a34a;color:#fff}
+/* ===== STEP BADGE ===== */
+.step-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;margin-right:5px;flex-shrink:0}
+/* ===== NAV BADGE ===== */
+.nav-status{font-size:10px;margin-left:auto;opacity:0.8}
 </style>
 </head>
 <body>
@@ -278,13 +292,13 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
         <span class="nav-icon">📋</span> シフト表
       </div>
       <div class="nav-item admin-only" id="nav-stores" onclick="switchView('stores')">
-        <span class="nav-icon">🏪</span> 店舗設定
+        <span class="nav-icon">🏪</span> 店舗設定<span id="navBadgeStores" class="nav-status"></span>
       </div>
       <div class="nav-item admin-only" id="nav-staff" onclick="switchView('staff')">
-        <span class="nav-icon">👤</span> スタッフ管理
+        <span class="nav-icon">👤</span> スタッフ管理<span id="navBadgeStaff" class="nav-status"></span>
       </div>
       <div class="nav-item admin-only" id="nav-settings" onclick="switchView('settings')">
-        <span class="nav-icon">⚙</span> 設定
+        <span class="nav-icon">⚙</span> 設定<span id="navBadgeSettings" class="nav-status"></span>
       </div>
     </nav>
   </aside>
@@ -298,6 +312,13 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
 
     <div class="content">
 
+      <!-- ===== SETUP BANNER (admin only) ===== -->
+      <div id="setupBanner" style="display:none;background:linear-gradient(135deg,#fff8f5,#ffeee6);border:1.5px solid rgba(232,82,10,0.25);border-radius:12px;padding:16px 20px;margin-bottom:16px;position:relative">
+        <button onclick="dismissSetupBanner()" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;line-height:1" title="閉じる">✕</button>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px">🚀 初回セットアップガイド <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px">シフト作成を始めるには以下のステップを完了してください</span></div>
+        <div id="setupSteps" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+
       <!-- ===== シフト表 VIEW ===== -->
       <div id="view-shift" class="view-panel active">
         <div class="shift-layout">
@@ -306,7 +327,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
           <div class="shift-left" style="display:flex;flex-direction:column;gap:12px">
 
             <div class="panel">
-              <div class="panel-header"><div class="dot"></div><span class="panel-title">対象月</span></div>
+              <div class="panel-header"><div class="dot"></div><span class="step-badge">①</span><span class="panel-title">年月を選ぶ</span></div>
               <div class="panel-body">
                 <div class="date-row">
                   <div class="form-group" style="margin-bottom:0">
@@ -322,14 +343,14 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
             </div>
 
             <div class="panel">
-              <div class="panel-header"><div class="dot o"></div><span class="panel-title">休日希望</span></div>
+              <div class="panel-header"><div class="dot o"></div><span class="step-badge">②</span><span class="panel-title">休日希望を入力する</span></div>
               <div class="panel-body" style="padding:10px">
                 <div id="staffList"></div>
               </div>
             </div>
 
             <div class="panel">
-              <div class="panel-header"><div class="dot" style="background:#f76a6a;box-shadow:0 0 6px #f76a6a"></div><span class="panel-title">前月末の連勤数</span></div>
+              <div class="panel-header"><div class="dot" style="background:#f76a6a;box-shadow:0 0 6px #f76a6a"></div><span class="step-badge">③</span><span class="panel-title">前月末の連勤数</span><span class="help-tip">?<span class="help-tip-text">先月の最終日から連続して出勤していた日数を入力します。月をまたぐ連勤制限の計算に使います。0＝休みで終わった場合。</span></span></div>
               <div class="panel-body" style="padding:10px 14px">
                 <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.6">月末に連続で出勤していた日数を入力してください（0=休みで終わった）</p>
                 <div id="prevConsecList"></div>
@@ -337,7 +358,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
             </div>
 
             <div class="panel">
-              <div class="panel-header"><div class="dot g"></div><span class="panel-title">追加指示（任意）</span></div>
+              <div class="panel-header"><div class="dot g"></div><span class="step-badge">④</span><span class="panel-title">追加指示（任意）</span><span class="help-tip">?<span class="help-tip-text">AIへの補足メモ。例：「○○さんを週2回以上△△店に入れてください」「○日は△△店を閉めます」</span></span></div>
               <div class="panel-body">
                 <textarea id="extraNote" placeholder="今月の特記事項（例：高坂を21〜23日連休にしたい）" rows="3"></textarea>
               </div>
@@ -868,6 +889,11 @@ function buildAutoConstraintsText() {
 
 // ==================== GENERATE ====================
 async function generateShift() {
+  const preflightIssues = runPreflightCheck();
+  if (preflightIssues.length > 0) {
+    alert('⚠ シフトを生成する前に以下を完了してください：\n\n' + preflightIssues.join('\n'));
+    return;
+  }
   const y = +document.getElementById('year').value;
   const m = +document.getElementById('month').value;
   const days = getDaysInMonth(y, m);
@@ -994,6 +1020,7 @@ JSONのみ出力。前置き・説明・コードブロック記号は不要。
     renderStores(y, m, days);
     checkViolations(y, m, days, parsed.violations||[], parsed.notes||'');
     document.getElementById('exportRow').style.display = 'flex';
+    renderSetupBanner();
     document.getElementById('btnUndo').style.display = 'none';
     document.getElementById('changeCount').textContent = '';
     document.getElementById('storePanel').style.display = 'block';
@@ -1301,7 +1328,13 @@ async function publishShift() {
     alert('シフトが生成されていません。先にAIでシフトを生成してください。');
     return;
   }
-  if (!confirm('このシフトを確定・公開しますか？\nスタッフが閲覧用ページで確認できるようになります。')) return;
+  const _errItems = document.querySelectorAll('#violationArea .viol-item:not(.warn):not(.info)');
+  const _errCount = _errItems.length;
+  let _confirmMsg = 'このシフトを確定・公開しますか？\nスタッフが閲覧用ページで確認できるようになります。';
+  if (_errCount > 0) {
+    _confirmMsg = `⚠ ルール違反が ${_errCount} 件あります。\n\nこのまま公開すると違反があるシフトが公開されます。本当に公開しますか？\n\n（「キャンセル」してシフト表下の「ルールチェック」を確認することをおすすめします）`;
+  }
+  if (!confirm(_confirmMsg)) return;
 
   if (!window._fbReady) {
     alert('Firebase初期化中です。数秒後に再試行してください。');
@@ -1526,6 +1559,8 @@ function saveAdmin() {
   prevMonthConsec = newConsec;
 
   renderCalendars();
+  renderSetupBanner();
+  updateNavBadges();
   alert('設定を保存しました。');
 }
 
@@ -1536,6 +1571,7 @@ function saveApiKey() {
   localStorage.setItem('gemini_api_key', key);
   document.getElementById('geminiApiKey').value = '';
   showApiKeyStatus();
+  renderSetupBanner(); updateNavBadges();
   alert('APIキーを保存しました。');
 }
 
@@ -1563,6 +1599,7 @@ function saveOpenAiApiKey() {
   localStorage.setItem('openai_api_key', key);
   document.getElementById('openaiApiKey').value = '';
   showOpenAiApiKeyStatus();
+  renderSetupBanner(); updateNavBadges();
   alert('OpenAI APIキーを保存しました。');
 }
 
@@ -1626,6 +1663,8 @@ function initAdminMode() {
   if (sessionStorage.getItem('admin_unlocked') === '1') {
     document.body.classList.add('admin-mode');
     updateLockBtn(true);
+    renderSetupBanner();
+    updateNavBadges();
   }
 }
 
@@ -1656,6 +1695,8 @@ function doUnlockAdmin() {
     sessionStorage.setItem('admin_unlocked', '1');
     updateLockBtn(true);
     closePwModal();
+    renderSetupBanner();
+    updateNavBadges();
     if (Object.keys(shiftData).length > 0) {
       document.getElementById('exportRow').style.display = 'flex';
     }
@@ -1771,8 +1812,74 @@ async function loadSettingsFromFirestore() {
     }
     if (d.storeRules) { storeRulesText = d.storeRules; localStorage.setItem('shift_store_rules_v5', storeRulesText); changed = true; }
     if (d.staffRules) { staffRulesText = d.staffRules; localStorage.setItem('shift_staff_rules_v5', staffRulesText); changed = true; }
-    if (changed) renderCalendars();
+    if (changed) { renderCalendars(); renderSetupBanner(); updateNavBadges(); }
   } catch(e) { console.warn('設定読み込み失敗:', e.message); }
+}
+
+// ==================== SETUP GUIDE ====================
+const SETUP_STEPS_DEF = [
+  { id:'stores', label:'店舗設定', view:'stores', check: () => STORES.length > 0 },
+  { id:'staff',  label:'スタッフ管理', view:'staff', check: () => STAFF.length > 0 },
+  { id:'api',    label:'APIキー設定', view:'settings', check: () => !!(localStorage.getItem('gemini_api_key') || localStorage.getItem('openai_api_key')) },
+  { id:'shift',  label:'シフト生成', view:'shift', check: () => Object.keys(shiftData).length > 0 },
+];
+
+function renderSetupBanner() {
+  const banner = document.getElementById('setupBanner');
+  if (!banner) return;
+  if (!document.body.classList.contains('admin-mode')) { banner.style.display = 'none'; return; }
+  if (localStorage.getItem('setup_banner_dismissed') === '1') { banner.style.display = 'none'; return; }
+
+  const results = SETUP_STEPS_DEF.map(s => ({ ...s, done: s.check() }));
+  const allDone = results.every(s => s.done);
+
+  if (allDone) {
+    banner.innerHTML = `<div style="font-size:13px;font-weight:700;color:#15803d;display:flex;align-items:center;gap:8px">
+      ✅ セットアップ完了！シフトを生成して公開できます。
+      <button onclick="dismissSetupBanner()" style="background:none;border:none;font-size:16px;color:var(--text-muted);cursor:pointer;margin-left:auto">✕</button>
+    </div>`;
+    banner.style.display = 'block';
+    setTimeout(() => { banner.style.display = 'none'; localStorage.setItem('setup_banner_dismissed','1'); }, 4000);
+    return;
+  }
+
+  const stepsHtml = results.map(s =>
+    `<div class="setup-step${s.done?' done':''}" onclick="switchView('${s.view}')">
+      <div class="step-num">${s.done?'✓':''}</div>${s.label}
+    </div>`
+  ).join('');
+
+  document.getElementById('setupSteps').innerHTML = stepsHtml;
+  banner.style.display = 'block';
+}
+
+function dismissSetupBanner() {
+  localStorage.setItem('setup_banner_dismissed', '1');
+  const b = document.getElementById('setupBanner');
+  if (b) b.style.display = 'none';
+}
+
+function updateNavBadges() {
+  if (!document.body.classList.contains('admin-mode')) return;
+  const map = {
+    navBadgeStores:   STORES.length > 0,
+    navBadgeStaff:    STAFF.length > 0,
+    navBadgeSettings: !!(localStorage.getItem('gemini_api_key') || localStorage.getItem('openai_api_key')),
+  };
+  Object.entries(map).forEach(([id, done]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = done ? '●' : '○', el.style.color = done ? '#16a34a' : '#94a3b8';
+  });
+}
+
+function runPreflightCheck() {
+  const issues = [];
+  if (STAFF.length === 0)  issues.push('• スタッフが登録されていません → 「スタッフ管理」タブで追加してください');
+  if (STORES.length === 0) issues.push('• 店舗が登録されていません → 「店舗設定」タブで追加してください');
+  const engine = localStorage.getItem('ai_engine') || 'gemini';
+  const key = engine === 'gemini' ? localStorage.getItem('gemini_api_key') : localStorage.getItem('openai_api_key');
+  if (!key) issues.push(`• APIキーが設定されていません → 「設定」タブで ${engine === 'gemini' ? 'Gemini' : 'OpenAI'} APIキーを入力してください`);
+  return issues;
 }
 
 // ==================== INIT ====================
