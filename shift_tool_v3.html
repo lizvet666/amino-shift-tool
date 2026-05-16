@@ -1684,7 +1684,7 @@ function syncFormChoices() {
   const gasUrl = localStorage.getItem('gas_webhook_url');
   if (!gasUrl) return;
   const staffNames = STAFF.map(s => s.name);
-  const storeNames = STORES.map(s => s.name);
+  const storeNames = STORES.map(s => s.name).filter(n => n !== '事務');
   const body = new URLSearchParams({
     type: 'updateForm',
     staffNames: JSON.stringify(staffNames),
