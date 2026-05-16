@@ -1687,7 +1687,6 @@ function syncFormChoices() {
   const storeNames = STORES.map(s => s.name);
   fetch(gasUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type: 'updateForm', staffNames, storeNames }),
   }).catch(() => {});
 }
