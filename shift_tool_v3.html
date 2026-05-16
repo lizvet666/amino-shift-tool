@@ -1676,7 +1676,20 @@ function saveAdmin() {
   renderCalendars();
   renderSetupBanner();
   updateNavBadges();
+  syncFormChoices();
   alert('設定を保存しました。');
+}
+
+function syncFormChoices() {
+  const gasUrl = localStorage.getItem('gas_webhook_url');
+  if (!gasUrl) return;
+  const staffNames = STAFF.map(s => s.name);
+  const storeNames = STORES.map(s => s.name);
+  fetch(gasUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'updateForm', staffNames, storeNames }),
+  }).catch(() => {});
 }
 
 // ==================== API KEY ====================
