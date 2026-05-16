@@ -1699,6 +1699,7 @@ function saveApiKey() {
   document.getElementById('geminiApiKey').value = '';
   showApiKeyStatus();
   renderSetupBanner(); updateNavBadges();
+  saveSettingsToFirestore();
   alert('APIキーを保存しました。');
 }
 
@@ -1718,6 +1719,7 @@ function clearApiKey() {
   if (!confirm('APIキーを削除しますか？')) return;
   localStorage.removeItem('gemini_api_key');
   showApiKeyStatus();
+  saveSettingsToFirestore();
 }
 
 function saveOpenAiApiKey() {
@@ -1754,6 +1756,7 @@ function saveGasUrl() {
   localStorage.setItem('gas_webhook_url', url);
   document.getElementById('gasWebhookUrl').value = '';
   showGasUrlStatus();
+  saveSettingsToFirestore();
   alert('GAS URLを保存しました。');
 }
 
@@ -1773,6 +1776,7 @@ function clearGasUrl() {
   if (!confirm('GAS URLを削除しますか？')) return;
   localStorage.removeItem('gas_webhook_url');
   showGasUrlStatus();
+  saveSettingsToFirestore();
 }
 
 function saveAiEngine() {
@@ -1962,9 +1966,12 @@ function viewerChangeMonth(delta) {
 async function saveSettingsToFirestore() {
   if (!window._fbReady) return;
   try {
+    const geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+    const gasWebhookUrl = localStorage.getItem('gas_webhook_url') || '';
     await window._fbSetDoc(window._fbDoc(window._fbDb, 'settings', 'config'), {
       staff: STAFF, stores: STORES,
       storeRules: storeRulesText, staffRules: staffRulesText,
+      geminiApiKey, gasWebhookUrl,
       updatedAt: new Date().toISOString()
     });
   } catch(e) { console.warn('設定保存失敗:', e.message); }
@@ -1992,6 +1999,8 @@ async function loadSettingsFromFirestore() {
     }
     if (d.storeRules) { storeRulesText = d.storeRules; localStorage.setItem('shift_store_rules_v5', storeRulesText); changed = true; }
     if (d.staffRules) { staffRulesText = d.staffRules; localStorage.setItem('shift_staff_rules_v5', staffRulesText); changed = true; }
+    if (d.geminiApiKey) { localStorage.setItem('gemini_api_key', d.geminiApiKey); showApiKeyStatus(); }
+    if (d.gasWebhookUrl) { localStorage.setItem('gas_webhook_url', d.gasWebhookUrl); showGasUrlStatus(); }
     if (changed) { renderCalendars(); renderSetupBanner(); updateNavBadges(); }
   } catch(e) { console.warn('設定読み込み失敗:', e.message); }
 }
