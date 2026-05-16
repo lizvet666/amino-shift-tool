@@ -1685,11 +1685,12 @@ function syncFormChoices() {
   if (!gasUrl) return;
   const staffNames = STAFF.map(s => s.name);
   const storeNames = STORES.map(s => s.name);
-  fetch(gasUrl, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify({ type: 'updateForm', staffNames, storeNames }),
-  }).catch(() => {});
+  const body = new URLSearchParams({
+    type: 'updateForm',
+    staffNames: JSON.stringify(staffNames),
+    storeNames: JSON.stringify(storeNames),
+  });
+  fetch(gasUrl, { method: 'POST', mode: 'no-cors', body }).catch(() => {});
 }
 
 // ==================== API KEY ====================
