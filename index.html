@@ -296,6 +296,26 @@ body:not(.admin-mode) .sidebar { display: none; }
 .step-badge{display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);margin-right:4px;flex-shrink:0}
 /* ===== NAV BADGE ===== */
 .nav-status{font-size:10px;margin-left:auto;opacity:0.9}
+/* ===== AI CHAT WIDGET ===== */
+#chatWidget{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+#chatToggleBtn{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(85,107,93,0.4);transition:transform 0.15s,box-shadow 0.15s;display:flex;align-items:center;justify-content:center}
+#chatToggleBtn:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(85,107,93,0.5)}
+#chatPanel{width:340px;height:480px;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.12);display:none;flex-direction:column;overflow:hidden;animation:popIn 0.15s ease}
+.chat-header{background:var(--accent);color:#fff;padding:14px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.chat-header-sub{font-size:10px;font-weight:400;opacity:0.8;margin-left:auto}
+.chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{max-width:85%;padding:9px 12px;border-radius:14px;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-msg.bot{background:var(--surface2);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
+.chat-msg.thinking{opacity:0.6;font-style:italic}
+.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.chat-input-row input{flex:1;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-family:inherit;outline:none;background:var(--surface2)}
+.chat-input-row input:focus{border-color:var(--accent)}
+.chat-input-row button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
+.chat-input-row button:hover{background:var(--accent-mid)}
+.chat-quick-btns{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chat-quick-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;cursor:pointer;color:var(--text);transition:all 0.15s}
+.chat-quick-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -559,7 +579,7 @@ body:not(.admin-mode) .sidebar { display: none; }
               <div class="form-group" style="margin-bottom:0;max-width:320px">
                 <label>使用するAI</label>
                 <select id="aiEngine" onchange="saveAiEngine()">
-                  <option value="gemini">Google Gemini（gemini-3-flash-preview）</option>
+                  <option value="gemini">Google Gemini（gemini-2.5-flash）</option>
                   <option value="openai">OpenAI ChatGPT（gpt-4o）</option>
                 </select>
               </div>
@@ -663,6 +683,30 @@ body:not(.admin-mode) .sidebar { display: none; }
       <button class="btn-sm pri" onclick="doUnlockAdmin()">ログイン</button>
     </div>
   </div>
+</div>
+
+<!-- AI Chat Widget (admin only) -->
+<div id="chatWidget" class="admin-only">
+  <div id="chatPanel">
+    <div class="chat-header">
+      🤖 AIアシスタント
+      <span class="chat-header-sub">Gemini powered</span>
+      <button onclick="toggleChat()" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;margin-left:8px;line-height:1">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg bot">こんにちは！シフトルールの書き方や現在のルールの問題点について、お気軽に質問してください。</div>
+    </div>
+    <div class="chat-quick-btns" id="chatQuickBtns">
+      <button class="chat-quick-btn" onclick="quickAsk('店舗ルールの書き方を教えて')">店舗ルールの書き方は？</button>
+      <button class="chat-quick-btn" onclick="quickAsk('現在のルールに問題点はある？')">現在のルールを確認して</button>
+      <button class="chat-quick-btn" onclick="quickAsk('スタッフルールの例を見せて')">スタッフルールの例は？</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="質問を入力..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+      <button onclick="sendChatMessage()">送信</button>
+    </div>
+  </div>
+  <button id="chatToggleBtn" onclick="toggleChat()" title="AIアシスタント">💬</button>
 </div>
 
 <!-- Popup -->
@@ -1083,7 +1127,7 @@ JSONのみ出力。前置き・説明・コードブロック記号は不要。
       raw = data.choices?.[0]?.message?.content || '';
       if (!raw) throw new Error('ChatGPTからの応答が空でした。APIキーや利用制限を確認してください。');
     } else {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
@@ -2050,6 +2094,95 @@ function runPreflightCheck() {
   const key = engine === 'gemini' ? localStorage.getItem('gemini_api_key') : localStorage.getItem('openai_api_key');
   if (!key) issues.push(`• APIキーが設定されていません → 「設定」タブで ${engine === 'gemini' ? 'Gemini' : 'OpenAI'} APIキーを入力してください`);
   return issues;
+}
+
+// ==================== AI CHAT ====================
+let chatHistory = [];
+
+function toggleChat() {
+  const panel = document.getElementById('chatPanel');
+  const isOpen = panel.style.display === 'flex';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) document.getElementById('chatInput').focus();
+}
+
+function addChatMessage(role, text, isThinking = false) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role + (isThinking ? ' thinking' : '');
+  div.textContent = text;
+  div.dataset.thinking = isThinking ? '1' : '';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function quickAsk(text) {
+  document.getElementById('chatInput').value = text;
+  document.getElementById('chatQuickBtns').style.display = 'none';
+  sendChatMessage();
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  addChatMessage('user', msg);
+  chatHistory.push({ role: 'user', parts: [{ text: msg }] });
+
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    addChatMessage('bot', '⚠ GeminiのAPIキーが設定されていません。「設定」タブで入力してください。');
+    return;
+  }
+
+  const storeRules = document.getElementById('adminStoreRules')?.value || storeRulesText || '';
+  const staffRules = document.getElementById('adminStaffRules')?.value || staffRulesText || '';
+  const storeNames = STORES.map(s => s.name).join('、') || '（未設定）';
+  const staffNames = STAFF.map(s => s.name).join('、') || '（未設定）';
+
+  const systemPrompt = `あなたはシフト管理アプリ「Amino-YA」のAIサポートアシスタントです。
+管理者がAIシフト自動生成のためのルールを正しく設定できるよう、やさしくサポートしてください。
+ITリテラシーが高くない管理者が使うため、専門用語を避けて具体的にわかりやすく説明してください。
+
+【現在の店舗】${storeNames}
+【現在のスタッフ】${staffNames}
+
+【現在の店舗ルール】
+${storeRules}
+
+【現在のスタッフルール】
+${staffRules}
+
+ルールの書き方のアドバイス・問題点の指摘・アプリの使い方について日本語で回答してください。箇条書きや具体例を使ってわかりやすく書いてください。`;
+
+  const thinkingMsg = addChatMessage('bot', '考え中...', true);
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: chatHistory,
+        })
+      }
+    );
+    const data = await res.json();
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text
+      || data?.error?.message
+      || '回答を取得できませんでした。';
+    thinkingMsg.remove();
+    addChatMessage('bot', answer);
+    chatHistory.push({ role: 'model', parts: [{ text: answer }] });
+  } catch(e) {
+    thinkingMsg.remove();
+    addChatMessage('bot', '⚠ エラーが発生しました: ' + e.message);
+  }
 }
 
 // ==================== INIT ====================
