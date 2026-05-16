@@ -7,7 +7,7 @@
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, doc, setDoc, getDoc, collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, doc, setDoc, getDoc, deleteDoc, collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyAm30tcmi5Sqm2X8FKoMLqlhjWySiEnRM",
@@ -24,6 +24,7 @@
   window._fbDb = db;
   window._fbSetDoc = setDoc;
   window._fbGetDoc = getDoc;
+  window._fbDeleteDoc = deleteDoc;
   window._fbDoc = doc;
   window._fbCollection = collection;
   window._fbGetDocs = getDocs;
@@ -418,6 +419,7 @@ body:not(.admin-mode) .sidebar { display: none; }
                   <span class="change-count" id="changeCount"></span>
                   <button class="btn-sm" onclick="publishShift()" id="btnPublish" style="background:var(--success);color:#fff;border:none">✅ 確定・公開</button>
                   <button class="btn-sm" id="btnLineNotify" onclick="sendLineNotification()" style="display:none;background:#06C755;color:#fff;border:none">📨 LINEに通知する</button>
+                  <button class="btn-sm" onclick="deleteShift()" id="btnDelete" style="display:none;background:var(--danger);color:#fff;border:none">🗑 公開削除</button>
                 </div>
               </div>
               <div id="shiftArea">
@@ -1459,6 +1461,7 @@ async function publishShift() {
     );
     overlay.classList.remove('show');
     alert(`✅ ${y}年${m}月のシフトを公開しました！\nスタッフが /view から確認できます。`);
+    document.getElementById('btnDelete').style.display = '';
 
     // LINEボタンを表示（GAS URLが設定されている場合）
     const gasUrl = localStorage.getItem('gas_webhook_url') || '';
@@ -1472,6 +1475,35 @@ async function publishShift() {
   } catch(err) {
     overlay.classList.remove('show');
     alert('公開エラー: ' + err.message + '\nFirestoreのルールを確認してください。');
+  }
+}
+
+async function deleteShift() {
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  if (!confirm(`⚠ ${y}年${m}月の公開済みシフトを削除しますか？\n\nスタッフの閲覧ページからも消えます。この操作は元に戻せません。`)) return;
+  if (!window._fbReady) { alert('Firebase初期化中です。少し待ってから再試行してください。'); return; }
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  overlay.classList.add('show');
+  loadingText.textContent = '削除中...';
+  try {
+    const docId = `${y}_${String(m).padStart(2,'0')}`;
+    await window._fbDeleteDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    overlay.classList.remove('show');
+    shiftData = {};
+    originalShift = {};
+    changeHistory = [];
+    modifiedCells = new Set();
+    document.getElementById('shiftArea').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div>シフトがまだ生成されていません</div></div>';
+    document.getElementById('exportRow').style.display = 'none';
+    document.getElementById('btnDelete').style.display = 'none';
+    document.getElementById('storePanel').style.display = 'none';
+    document.getElementById('violPanel').style.display = 'none';
+    alert(`🗑 ${y}年${m}月のシフトを削除しました。`);
+  } catch(err) {
+    overlay.classList.remove('show');
+    alert('削除エラー: ' + err.message);
   }
 }
 
@@ -1861,6 +1893,7 @@ async function loadPublishedShift() {
     checkViolations(y, m, days, [], '');
     document.getElementById('exportRow').style.display = 'flex';
     document.getElementById('btnUndo').style.display = 'none';
+    document.getElementById('btnDelete').style.display = '';
     document.getElementById('changeCount').textContent = '';
     document.getElementById('storePanel').style.display = 'block';
     document.getElementById('violPanel').style.display = 'block';
