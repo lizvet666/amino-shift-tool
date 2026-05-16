@@ -267,6 +267,12 @@ textarea { resize: vertical; min-height: 54px; }
 body:not(.admin-mode) .admin-only { display: none !important; }
 body:not(.admin-mode) .shift-cell { cursor: default; }
 body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
+body:not(.admin-mode) .sidebar { display: none; }
+/* ===== VIEWER MONTH NAV ===== */
+.viewer-month-nav { display:flex; align-items:center; justify-content:center; gap:16px; padding:14px 20px; border-bottom:1px solid var(--border); }
+.viewer-month-nav button { width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.viewer-month-nav button:hover { border-color:var(--accent); color:var(--accent); background:rgba(85,107,93,0.06); }
+.viewer-month-label { font-size:16px; font-weight:700; color:var(--text); min-width:120px; text-align:center; }
 
 /* ===== PASSWORD MODAL ===== */
 .pw-modal-overlay { display:none; position:fixed; inset:0; background:rgba(55,64,58,0.65); z-index:600; align-items:center; justify-content:center; backdrop-filter:blur(8px); }
@@ -330,7 +336,7 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
   <!-- ===== MAIN AREA ===== -->
   <div class="main-area">
     <header class="top-header">
-      <h1 class="page-title">シフト自動作成ツール</h1>
+      <h1 class="page-title" id="pageTitle">Amino-YAシフト</h1>
       <button class="btn-login" id="btnLock" onclick="handleLockBtn()">👤 管理者ログイン</button>
     </header>
 
@@ -396,9 +402,15 @@ body:not(.admin-mode) .shift-cell:hover { transform: none; box-shadow: none; }
           <div class="shift-right">
 
             <div class="panel">
+              <!-- 非管理者向け月ナビ -->
+              <div class="viewer-month-nav admin-hide" id="viewerMonthNav" style="display:none">
+                <button onclick="viewerChangeMonth(-1)">‹</button>
+                <span class="viewer-month-label" id="viewerMonthLabel">読み込み中...</span>
+                <button onclick="viewerChangeMonth(1)">›</button>
+              </div>
               <div class="section-bar">
                 <div class="dot"></div>
-                <span class="section-title">📋 シフト表</span>
+                <span class="section-title admin-only">📋 シフト表</span>
                 <div id="exportRow" class="admin-only" style="display:none;margin-left:auto;align-items:center;gap:6px">
                   <button class="btn-sm pri" onclick="exportCSV()">📥 CSV</button>
                   <button class="btn-sm" onclick="generateShift()">🔄 再生成</button>
@@ -1859,6 +1871,50 @@ async function loadPublishedShift() {
   }
 }
 
+// ==================== VIEWER AUTO LOAD ====================
+let _viewerY = new Date().getFullYear();
+let _viewerM = new Date().getMonth() + 1;
+
+async function autoLoadViewerShift(y, m) {
+  if (document.body.classList.contains('admin-mode')) return;
+  if (!window._fbReady) {
+    await new Promise(r => window.addEventListener('firebase-ready', r, { once: true }));
+  }
+  const nav = document.getElementById('viewerMonthNav');
+  const label = document.getElementById('viewerMonthLabel');
+  if (nav) nav.style.display = 'flex';
+  if (label) label.textContent = `${y}年${m}月`;
+  document.getElementById('year').value = y;
+  document.getElementById('month').value = m;
+
+  const docId = `${y}_${String(m).padStart(2,'0')}`;
+  try {
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    if (!snap.exists()) {
+      document.getElementById('shiftArea').innerHTML =
+        `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">${y}年${m}月のシフトはまだ公開されていません</div></div>`;
+      return;
+    }
+    const data = snap.data();
+    shiftData = data.shiftData || {};
+    if (data.staffList && data.staffList.length > 0 && STAFF.length === 0) {
+      STAFF = data.staffList.map((name, i) => ({ id:'s'+i, name, fixedRestDow:[], onlyDow:-1, maxConsecutive:5 }));
+    }
+    if (data.storeList && data.storeList.length > 0 && STORES.length === 0) {
+      STORES = data.storeList.map((name, i) => ({ id:'st'+i, name, required:0, maxPerDay:1, allowedStaff:[], maxDay:0, minDay:0, weekdayOnly:false, noWeekdays:[] }));
+    }
+    const days = getDaysInMonth(y, m);
+    renderShiftTable(y, m, days);
+  } catch(e) { console.warn('シフト読み込みエラー:', e.message); }
+}
+
+function viewerChangeMonth(delta) {
+  _viewerM += delta;
+  if (_viewerM > 12) { _viewerM = 1; _viewerY++; }
+  if (_viewerM < 1)  { _viewerM = 12; _viewerY--; }
+  autoLoadViewerShift(_viewerY, _viewerM);
+}
+
 // ==================== FIRESTORE SETTINGS SYNC ====================
 async function saveSettingsToFirestore() {
   if (!window._fbReady) return;
@@ -1973,6 +2029,10 @@ initAdminMode();
 renderCalendars();
 renderPrevConsecList();
 loadSettingsFromFirestore();
+// 非管理者なら当月シフトを自動表示
+if (!sessionStorage.getItem('admin_unlocked')) {
+  autoLoadViewerShift(_viewerY, _viewerM);
+}
 </script>
 </body>
 </html>
