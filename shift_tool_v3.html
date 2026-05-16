@@ -567,6 +567,7 @@ body:not(.admin-mode) .sidebar { display: none; }
             <div class="panel-body">
               <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">店舗ごとの詳細ルールを記述します。設定した構造化制約は自動で追記されます。</p>
               <textarea class="rules-textarea" id="adminStoreRules"></textarea>
+              <button class="btn-sm" style="margin-top:6px;font-size:10px" onclick="if(confirm('店舗ルールをコードに記載されている初期値に戻しますか？')){ document.getElementById('adminStoreRules').value=DEFAULT_STORE_RULES; }">↩ 初期値に戻す</button>
             </div>
           </div>
 
@@ -575,6 +576,7 @@ body:not(.admin-mode) .sidebar { display: none; }
             <div class="panel-body">
               <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">スタッフごとの優先配置・希望などを記述します。</p>
               <textarea class="rules-textarea" id="adminStaffRules"></textarea>
+              <button class="btn-sm" style="margin-top:6px;font-size:10px" onclick="if(confirm('スタッフルールをコードに記載されている初期値に戻しますか？')){ document.getElementById('adminStaffRules').value=DEFAULT_STAFF_RULES; }">↩ 初期値に戻す</button>
             </div>
           </div>
 
@@ -1709,10 +1711,16 @@ function saveAdmin() {
   });
 
   // Sync rule textareas before saving
+  // テキストエリアが未初期化（空）の場合はメモリ上の変数を使う
+  // adminEditing が未初期化（タブ未訪問）の場合はルール同期をスキップ
   const storeRulesEl = document.getElementById('adminStoreRules');
   const staffRulesEl = document.getElementById('adminStaffRules');
-  storeRulesEl.value = syncRulesText(storeRulesEl.value, STORES, adminEditing.stores);
-  staffRulesEl.value = syncRulesText(staffRulesEl.value, STAFF, adminEditing.staff);
+  const baseStoreRules = storeRulesEl.value.trim() ? storeRulesEl.value : storeRulesText;
+  const baseStaffRules = staffRulesEl.value.trim() ? staffRulesEl.value : staffRulesText;
+  storeRulesEl.value = adminEditing.stores.length > 0
+    ? syncRulesText(baseStoreRules, STORES, adminEditing.stores) : baseStoreRules;
+  staffRulesEl.value = adminEditing.staff.length > 0
+    ? syncRulesText(baseStaffRules, STAFF, adminEditing.staff) : baseStaffRules;
 
   if (adminEditing.staff.length > 0)  { STAFF  = adminEditing.staff;  localStorage.setItem('shift_staff_v5',  JSON.stringify(STAFF)); }
   if (adminEditing.stores.length > 0) { STORES = adminEditing.stores; localStorage.setItem('shift_stores_v6', JSON.stringify(STORES)); }
