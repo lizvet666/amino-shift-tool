@@ -251,6 +251,10 @@ textarea { resize: vertical; min-height: 54px; }
 .admin-table th { background: var(--surface2); padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
 .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .admin-table tr:last-child td { border-bottom: none; }
+.drag-handle { cursor: grab; color: var(--text-muted); font-size: 16px; user-select: none; text-align: center; padding: 0 4px !important; }
+.drag-handle:active { cursor: grabbing; }
+.admin-table tr.drag-over { outline: 2px solid var(--accent); outline-offset: -1px; }
+.admin-table tr.dragging { opacity: 0.4; }
 .admin-table input[type="text"], .admin-table input[type="number"], .admin-table select { padding: 5px 8px; font-size: 12px; border-radius: 6px; }
 .admin-table input[type="text"] { width: 100%; }
 .admin-add-row { display: flex; gap: 8px; margin-top: 14px; align-items: flex-end; flex-wrap: wrap; }
@@ -484,6 +488,7 @@ body:not(.admin-mode) .sidebar { display: none; }
             <table class="admin-table" id="storeAdminTable">
               <thead>
                 <tr>
+                  <th style="width:24px"></th>
                   <th>店舗名</th>
                   <th class="col-narrow">必要日数</th>
                   <th class="col-narrow">1日最大</th>
@@ -527,6 +532,7 @@ body:not(.admin-mode) .sidebar { display: none; }
             <table class="admin-table" id="staffAdminTable">
               <thead>
                 <tr>
+                  <th style="width:24px"></th>
                   <th>名前</th>
                   <th class="col-mid">固定休み曜日</th>
                   <th class="col-narrow">最大連勤</th>
@@ -1540,13 +1546,21 @@ function switchView(name) {
 
 // ==================== ADMIN TABLES ====================
 let adminEditing = { staff: [], stores: [] };
+let _staffDragIdx = null;
+let _storeDragIdx = null;
 
 function renderStaffAdminTable() {
   const tbody = document.getElementById('staffAdminBody');
   tbody.innerHTML = '';
   adminEditing.staff.forEach((s, idx) => {
     const tr = document.createElement('tr');
+    tr.draggable = true;
+    tr.ondragstart = () => { _staffDragIdx = idx; tr.classList.add('dragging'); };
+    tr.ondragend = () => tr.classList.remove('dragging');
+    tr.ondragover = (e) => { e.preventDefault(); tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over')); tr.classList.add('drag-over'); };
+    tr.ondrop = (e) => { e.preventDefault(); tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over')); if (_staffDragIdx !== null && _staffDragIdx !== idx) { const moved = adminEditing.staff.splice(_staffDragIdx, 1)[0]; adminEditing.staff.splice(idx, 0, moved); _staffDragIdx = null; renderStaffAdminTable(); } };
     tr.innerHTML = `
+      <td class="drag-handle">⠿</td>
       <td><input type="text" value="${s.name}" onchange="adminEditing.staff[${idx}].name=this.value" style="width:90px"></td>
       <td>
         <div class="dow-checks" id="fixedRest_${idx}">
@@ -1589,8 +1603,14 @@ function renderStoreAdminTable() {
   tbody.innerHTML = '';
   adminEditing.stores.forEach((s, idx) => {
     const tr = document.createElement('tr');
+    tr.draggable = true;
+    tr.ondragstart = () => { _storeDragIdx = idx; tr.classList.add('dragging'); };
+    tr.ondragend = () => tr.classList.remove('dragging');
+    tr.ondragover = (e) => { e.preventDefault(); tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over')); tr.classList.add('drag-over'); };
+    tr.ondrop = (e) => { e.preventDefault(); tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over')); if (_storeDragIdx !== null && _storeDragIdx !== idx) { const moved = adminEditing.stores.splice(_storeDragIdx, 1)[0]; adminEditing.stores.splice(idx, 0, moved); _storeDragIdx = null; renderStoreAdminTable(); } };
     const operVal = s.maxDay > 0 ? (s.weekdayOnly ? '1-10-wkday' : '1-10') : (s.minDay > 0 ? '11-' : 'all');
     tr.innerHTML = `
+      <td class="drag-handle">⠿</td>
       <td><input type="text" value="${s.name}" onchange="adminEditing.stores[${idx}].name=this.value" style="width:80px"></td>
       <td class="col-narrow"><input type="number" value="${s.required}" min="1" max="100" onchange="adminEditing.stores[${idx}].required=+this.value" style="width:60px"></td>
       <td class="col-narrow"><input type="number" value="${s.maxPerDay??1}" min="1" max="10" onchange="adminEditing.stores[${idx}].maxPerDay=+this.value" style="width:50px"></td>
