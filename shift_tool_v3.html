@@ -1663,6 +1663,38 @@ function removeStore(idx) {
   renderStoreAdminTable();
 }
 
+function syncRulesText(rulesText, oldItems, newItems) {
+  let lines = rulesText.split('\n');
+  const oldNameById = {};
+  oldItems.forEach(item => { oldNameById[item.id] = item.name; });
+  // 1. Renames
+  newItems.forEach(item => {
+    const oldName = oldNameById[item.id];
+    if (oldName && oldName !== item.name) {
+      lines = lines.map(line => {
+        const pfFull = `- ${oldName}：`, pfHalf = `- ${oldName}:`;
+        if (line.startsWith(pfFull)) return `- ${item.name}：` + line.slice(pfFull.length);
+        if (line.startsWith(pfHalf)) return `- ${item.name}：` + line.slice(pfHalf.length);
+        return line;
+      });
+    }
+  });
+  // 2. Deletions
+  const newNamesSet = new Set(newItems.map(s => s.name));
+  const oldNamesSet = new Set(oldItems.map(s => s.name));
+  lines = lines.filter(line => {
+    const m = line.match(/^- ([^：:]+)[：:]/);
+    if (m) { const n = m[1].trim(); if (oldNamesSet.has(n) && !newNamesSet.has(n)) return false; }
+    return true;
+  });
+  // 3. Additions
+  const oldIdsSet = new Set(oldItems.map(s => s.id));
+  newItems.forEach(item => {
+    if (!oldIdsSet.has(item.id)) lines.push(`- ${item.name}：`);
+  });
+  return lines.join('\n');
+}
+
 function saveAdmin() {
   document.querySelectorAll('#staffAdminBody tr').forEach((tr, idx) => {
     const input = tr.querySelector('input[type="text"]');
@@ -1676,10 +1708,16 @@ function saveAdmin() {
     if (numInputs[1] && adminEditing.stores[idx]) adminEditing.stores[idx].maxPerDay = +numInputs[1].value;
   });
 
+  // Sync rule textareas before saving
+  const storeRulesEl = document.getElementById('adminStoreRules');
+  const staffRulesEl = document.getElementById('adminStaffRules');
+  storeRulesEl.value = syncRulesText(storeRulesEl.value, STORES, adminEditing.stores);
+  staffRulesEl.value = syncRulesText(staffRulesEl.value, STAFF, adminEditing.staff);
+
   if (adminEditing.staff.length > 0)  { STAFF  = adminEditing.staff;  localStorage.setItem('shift_staff_v5',  JSON.stringify(STAFF)); }
   if (adminEditing.stores.length > 0) { STORES = adminEditing.stores; localStorage.setItem('shift_stores_v6', JSON.stringify(STORES)); }
-  storeRulesText = document.getElementById('adminStoreRules').value;
-  staffRulesText = document.getElementById('adminStaffRules').value;
+  storeRulesText = storeRulesEl.value;
+  staffRulesText = staffRulesEl.value;
   localStorage.setItem('shift_store_rules_v5', storeRulesText);
   localStorage.setItem('shift_staff_rules_v5', staffRulesText);
   saveSettingsToFirestore();
