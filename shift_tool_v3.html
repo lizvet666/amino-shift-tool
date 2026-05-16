@@ -2056,8 +2056,51 @@ function runPreflightCheck() {
 document.addEventListener('click', e => {
   if (!e.target.closest('#storePopup')) document.getElementById('storePopup').style.display = 'none';
 });
-document.getElementById('year').addEventListener('change', renderCalendars);
-document.getElementById('month').addEventListener('change', renderCalendars);
+async function onYearMonthChange() {
+  renderCalendars();
+  if (!document.body.classList.contains('admin-mode')) return;
+  if (!window._fbReady) return;
+  const y = +document.getElementById('year').value;
+  const m = +document.getElementById('month').value;
+  if (Object.keys(shiftData).length > 0) {
+    if (!confirm(`年月を変更しました。\n${y}年${m}月の公開済みシフトを読み込みますか？\n（現在の編集内容は失われます）`)) return;
+  }
+  const docId = `${y}_${String(m).padStart(2,'0')}`;
+  try {
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'shifts', docId));
+    if (!snap.exists()) {
+      shiftData = {};
+      originalShift = {};
+      changeHistory = [];
+      modifiedCells = new Set();
+      document.getElementById('shiftArea').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div>この月の公開済みシフトはありません。AIで生成してください。</div></div>';
+      document.getElementById('exportRow').style.display = 'none';
+      document.getElementById('btnDelete').style.display = 'none';
+      document.getElementById('storePanel').style.display = 'none';
+      document.getElementById('violPanel').style.display = 'none';
+      return;
+    }
+    const data = snap.data();
+    shiftData = data.shiftData || {};
+    originalShift = JSON.parse(JSON.stringify(shiftData));
+    changeHistory = [];
+    modifiedCells = new Set();
+    clearStoreHighlight();
+    const days = getDaysInMonth(y, m);
+    renderShiftTable(y, m, days);
+    renderStores(y, m, days);
+    checkViolations(y, m, days, [], '');
+    document.getElementById('exportRow').style.display = 'flex';
+    document.getElementById('btnUndo').style.display = 'none';
+    document.getElementById('btnDelete').style.display = '';
+    document.getElementById('changeCount').textContent = '';
+    document.getElementById('storePanel').style.display = 'block';
+    document.getElementById('violPanel').style.display = 'block';
+  } catch(e) { /* ネットワークエラーは無視 */ }
+}
+
+document.getElementById('year').addEventListener('change', onYearMonthChange);
+document.getElementById('month').addEventListener('change', onYearMonthChange);
 initAdminMode();
 renderCalendars();
 renderPrevConsecList();
