@@ -353,6 +353,9 @@ body:not(.admin-mode) .sidebar { display: none; }
       </div>
     </nav>
     <div class="sidebar-footer admin-only">
+      <div class="sidebar-guide" onclick="loadPublishedShift()" style="color:rgba(255,255,255,0.7);margin-bottom:4px">
+        <span style="font-size:14px">📂</span> 公開済みシフトを読み込んで編集
+      </div>
       <div class="sidebar-guide" onclick="alert('使い方ガイド：\n①年月を選ぶ → ②休み希望を入力 → ③AIでシフト生成 → ④確認・編集 → ⑤確定・公開')">
         <span style="font-size:14px">❓</span> 使い方ガイド
       </div>
@@ -428,7 +431,6 @@ body:not(.admin-mode) .sidebar { display: none; }
             </div>
 
             <button class="btn-gen" id="btnGen" onclick="generateShift()">✦ AIでシフトを自動生成</button>
-            <button class="btn-sm" id="btnLoadPublished" onclick="loadPublishedShift()" style="width:100%;margin-top:6px;justify-content:center;padding:9px">📂 公開済みシフトを読み込んで編集</button>
           </div>
 
           <!-- Right: shift table + stores + violations -->
