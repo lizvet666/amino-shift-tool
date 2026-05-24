@@ -1281,12 +1281,39 @@ function renderStores(y, m, days) {
     const diffText = diff===0?'✓ 達成':(diff>0?`+${diff} 超過`:`${diff} 不足`);
     html += `<div class="store-card ${cls}" data-store="${store.name}" onclick="highlightStore('${store.name}')" style="border-left:3px solid ${c.text}">
       <div class="sc-name">${store.name}</div>
-      <div class="sc-num">${got}<span style="font-size:13px;color:var(--text-muted)">/${store.required}</span></div>
+      <div class="sc-num">${got}<span style="font-size:13px;color:var(--text-muted);cursor:pointer;border-bottom:1px dotted var(--text-muted)" onclick="event.stopPropagation();startEditRequired('${store.name}',${store.required},this)" title="クリックして変更">/${store.required}</span></div>
       <div style="font-size:11px;margin-top:3px;color:${cls==='ok'?'var(--success)':(cls==='over'?'var(--danger)':'var(--warning)')}">${diffText}</div>
     </div>`;
   });
   html += '</div>';
   area.innerHTML = html;
+}
+
+function startEditRequired(storeName, currentVal, el) {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = currentVal;
+  input.min = 0; input.max = 31;
+  input.style.cssText = 'width:38px;font-size:13px;border:1.5px solid var(--accent);border-radius:4px;padding:1px 3px;text-align:center;outline:none';
+  el.replaceWith(input);
+  input.focus(); input.select();
+  const save = () => {
+    const v = parseInt(input.value);
+    const s = STORES.find(s => s.name === storeName);
+    if (s && !isNaN(v) && v >= 0) {
+      s.required = v;
+      localStorage.setItem('shift_stores_v6', JSON.stringify(STORES));
+      saveSettingsToFirestore();
+    }
+    const y = +document.getElementById('year').value;
+    const m = +document.getElementById('month').value;
+    renderStores(y, m, new Date(y, m, 0).getDate());
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { input.value = currentVal; input.blur(); }
+  });
 }
 
 // ==================== STORE HIGHLIGHT ====================
